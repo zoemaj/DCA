@@ -1,0 +1,11 @@
+epochs: 90
+batchs: 32
+model_type: linear
+n_models: 1
+nb_hidden_neurons: 0
+seed: 203
+Validation: False
+Test: True
+separation: (0.7,0.7)
+optimizer defined by : (name, lr, momentum, dampening, weight_decay, nesterov)
+optimizer : SGD, 0.005, 0.01, 0, 0, False

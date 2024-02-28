@@ -1,0 +1,11 @@
+epochs: 50
+batchs: 32
+model_type: linear
+n_models: 1
+nb_hidden_neurons: 0
+seed: 203
+Validation: False
+Test: True
+separation: (0.7,0.7)
+optimizer defined by : (name, lr, rho, eps, weight_decay)
+optimizer : Adadelta, 0.008, 0.9, 1e-6, 0

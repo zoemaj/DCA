@@ -1,0 +1,11 @@
+epochs: 50
+batchs: 32
+model_type: linear
+n_models: 1
+nb_hidden_neurons: 0
+seed: 203
+Validation: False
+Test: True
+separation: (0.7,0.7)
+optimizer defined by : (name, lr, beta1, beta2, epsilon, weight_decay, amsgrad)
+optimizer : AdamW, 0.005, 0.9, 0.999, 1e-8, 0, False
