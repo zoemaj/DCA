@@ -1,10 +1,10 @@
 # Neural Network DCA
 
-Welcome to the exploration of DnaJ domain and SIS1 protein sequences by using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. If you just want to read the information about the functions, please go directly to <font color="orange">Content</font> and Organization :)
+Welcome to the exploration of DnaJ domain and SIS1 protein sequences by using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. If you just want to read the information about the functions, please go directly to **Content and Organization** :)
 
 If you want to know everything, such as what is the goal of this project or how the folders are structured, please continue.
 
-If you want to test some functions with a short set of sequences please go directly to "TRY ME"
+If you want to test some functions with a short set of sequences please go directly to **TRY ME**
 
 ## Description
 The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to predict the type of a residue given all other residues in a sequence and then to extract the knowledge learned by the network to do contact prediction.
