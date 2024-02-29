@@ -4,36 +4,32 @@ import matplotlib.pyplot as plt
 import torch
 import os
 
-
+#############################################################################
+######### THIS IS FROM AUDE MAYER 2022, NOT USED IN THIS VERSION ############
+#############################################################################
 def prediction(input, model, model_type) :
     if model_type == "non-linear" : return model.non_linear(input)
     elif model_type == "mix" : return model.linear(input) + model.non_linear(input)
-    else : print("error with model type")    
-
-
+    else : print("error with model type")  
+#############################################################################
+#############################################################################  
 
 def extract_couplings(model, model_type, original_shape) :
     """
-    extract coupling coefficients from the model
-
-    :param model: pytorch model from which to extract the coupling coefficients
-    :type model: nn.Module list
-    :param model_type: type of the model, can be "linear", "non-linear" or "mix"
-    :type model_type: string
-    :param original_shape: original shape of the MSA (L,K)
-    :type original_shape: tuple of int
-    :return: coupling coeff of the model
-    :rtype: numpy array
+    This function extracts the couplings coefficients from the model and returns them
+    inputs:     model               ->         pytorch model computed with model.py
+                model_type          ->         type of the model (linear, non-linear or mix) !!!! in this version, only linear !!!!!
+                original_shape      ->         original shape of the MSA (L,K)
+    outputs:    couplings           ->         couplings coefficients, shape (L*K,L*K)
     """
-
     (L,K) = original_shape
-    
     #for a linear model, the couplings are directly the weights learned
     if model_type == "linear" :
         return np.array(model.masked_linear.linear.weight.detach().cpu())
-    
         #note zozo: It returns a new tensor without requires_grad = True. The gradient with respect to this tensor will no longer be computed.
-
+    #############################################################################
+    ######### THIS IS FROM AUDE MAYER 2022, NOT USED IN THIS VERSION ############
+    #############################################################################
     elif model_type == "non-linear" or model_type == "mix":
         model.eval()
         with torch.no_grad() :
@@ -41,17 +37,14 @@ def extract_couplings(model, model_type, original_shape) :
             zeros = torch.zeros((L*K,L*K))
             pred_zero = prediction(zeros, model, model_type)
             pred_zero = pred_zero.detach()
-
             #prediction of delta_{i'=i} = bias + couplings[i]
             input_i = torch.eye(L*K)
             pred_i = prediction(input_i, model, model_type)
-            pred_i = pred_i.detach()
-            
+            pred_i = pred_i.detach()            
             return np.array(pred_i - pred_zero)
-
+    #############################################################################
+    #############################################################################
     else : print("error with model type")
-
-
 
 
 def ising_gauge(couplings, model, model_type, original_shape, data_per_col) :
@@ -70,10 +63,10 @@ def ising_gauge(couplings, model, model_type, original_shape, data_per_col) :
     :return: coupling coefficients after Ising gauge
     :rtype: numpy array
     """
-
     (L,K) = original_shape
-
-    #third order Ising gauge
+    #############################################################################
+    ######### THIS IS FROM AUDE MAYER 2022, NOT USED IN THIS VERSION ############
+    #############################################################################
     if model_type == "non-linear" or model_type == "mix" :
         model.eval()
         with torch.no_grad() :
@@ -81,38 +74,32 @@ def ising_gauge(couplings, model, model_type, original_shape, data_per_col) :
             zeros = torch.zeros((L*K,L*K))
             pred_zero = prediction(zeros, model, model_type)
             pred_zero = pred_zero.detach()
-
             #extract third order interaction coefficients from the model and use them to apply third order ising gauge
             for l in range(L) :
                 print("gauge process on triplets : ", l, "/", L)
-
                 nb_rows = (L-1) * K
                 input_j = torch.cat((torch.eye(nb_rows)[:,:l*K], torch.zeros(nb_rows, K), torch.eye(nb_rows)[:,l*K:]), dim=1)
                 pred_j = prediction(input_j, model, model_type)
                 pred_j = pred_j.detach()
-
                 for k in range(K) :
-
                     input_i_j = torch.clone(input_j)
                     input_i_j[:,l*K+k] = 1
                     pred_i_j = prediction(input_i_j, model, model_type)
                     pred_i_j = pred_i_j.detach()
-
                     input_i = torch.zeros(nb_rows, L*K)
                     input_i[:,l*K+k] = 1
                     pred_i = prediction(input_i, model, model_type)
                     pred_i = pred_i.detach()
-
                     #third order interaction coefficients between residue k and all other residues for all categories
                     triplets_l = np.array(pred_i_j - pred_i - pred_j + pred_zero[:len(pred_i_j)])
-
                     #third order ising gauge
                     couplings[l*K+k,:] += 2 * (np.sum(triplets_l,axis=0) / K)
-
+    #############################################################################
+    #############################################################################
+                    
     #second order Ising gauge
     if model_type == "linear":
         new_couplings = np.copy(couplings)
-
         # Initialize arrays outside the loops
         sum_row = np.zeros((L * K, L * K))
         sum_col = np.zeros((L * K, L * K))
@@ -142,18 +129,13 @@ def ising_gauge(couplings, model, model_type, original_shape, data_per_col) :
                     - sum_col[row_i, col_i] / K_beta
                     + sum_rowcol[row_i, col_i] / (K_alpha * K_beta)
                 )
-
         return new_couplings
-
-
-
 
 @jit(nopython=True, parallel=True) #parallelise using numba
 def average_product_correction(f) :
     """
     apply the average product correction on f, a numpy array containing the couplings,
     and return the corrected f
-
     :param f: array on which we want to apply the average product correction
     :type f: numpy array
     :return: f after average product correction
@@ -165,18 +147,29 @@ def average_product_correction(f) :
     f_ = np.sum(f)/(shape[0]*(shape[1]-1))
     for i in range(shape[0]) :
         for j in range(shape[1]) :
-            if j!= i : f[i,j] = f[i,j]-f_i_s[i]*f_j_s[j]/f_
-    
+            if j!= i : f[i,j] = f[i,j]-f_i_s[i]*f_j_s[j]/f_    
     return f
 
-
-
-
 def couplings(model_name, model_type, L, K, data_per_col, number_model, type_average, output_name) :
-    #now we have a list of models with model_name+number of the model
-    #we need to extract all the models and apply the couplings function on each of them
+    #now we have one model or a list of models with <model_name>_<number> such that <number> is 1,2,...number_model
+    #we need to extract the model(s) and apply the couplings function on it/each of them
     #then we need to average the couplings
-    
+    ''' 
+    This function extracts the couplings coefficients from the model(s) and applies the Ising gauge on it/them
+    inputs:     model_name          ->         name of the model or the <model_name> for each model <model_name>_<number>
+                model_type          ->         type of the model (linear, non-linear or mix) !!!! in this version, only linear !!!!!
+                L                   ->         length of the sequences
+                K                   ->         number of categories max 21 or 29 with taxonomies
+                data_per_col        ->         name of the file containing the data per column.
+                                                It is an array of shape (K,L) where a 1 means that this a.a is not present in the column of the MSA (N,L)
+                number_model        ->         number of models to average 
+                type_average        ->         type of average to apply on the couplings
+                output_name         ->         name of the output file
+    '''
+    ###################################################################################
+    ################# EXTRACTION OF THE MODEL(S) ######################################
+    ############ & data_per_col (the same for every model(s)) #########################
+    ###################################################################################
     models=[]
     number_model=int(number_model)
     if number_model>1:
@@ -189,7 +182,13 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     K = int(K)
     #load the data_per_col .txt file and convert it into a numpy array
     data_per_col=np.loadtxt(data_per_col)
+    ###################################################################################
+    ###################################################################################
 
+    ###################################################################################
+    ################# WEIGHT EXTRACTION AND ISING GAUGE FOR THE MODEL(S) ##############
+    ################### (depend if we consider the taxonomy or not)####################
+    ###################################################################################
     print("------------ weight extraction and Ising gauge for the model(s) ------------")
     #average_couplings=np.zeros((L*K,L*K))
     if K>21:
@@ -212,10 +211,12 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
         data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
     print('L,K:(',L,',',K,')')
     average_couplings=average_couplings/number_model
-    #plot symmetry of coupling coeff before Ising gauge
-    #np.triu(couplings) returns the upper triangular part
-    #np.tril(couplings) returns the lower triangular part
-    #.flatten() returns a copy of the array collapsed into one dimension
+    ###################################################################################
+    ###################################################################################
+
+    ###################################################################################
+    ################# PLOT OF THE COUPLINGS BEFORE ISING ##############################
+    ###################################################################################
     print("------------ plot before the ising gauge ------------")
     plt.figure()
     plt.plot(np.triu(average_couplings).flatten(), np.tril(average_couplings).T.flatten(), '.')
@@ -224,8 +225,25 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
     plt.grid()
     plt.show()
+    ##################################################################################
+    ##################################################################################
     
-    #Ising gauge
+    ##################################################################################
+    ################# COMPUTATION OF THE ISING GAUGE #################################
+    ##################################################################################
+    '''
+    There are 3 cases:
+    (1) number_model=1: 
+        we consider only one model so len(models)=1 and the model is the index 0.
+    (2) number_model>1 and type_average="average_couplings"
+        we apply ising gauge on each model and then average the couplings
+    (3) number_model>1 and type_average="average_couplings_frob"
+        we apply ising gauge on each model, and apply the average product correction on each couplings before averaging them
+
+    So for (2), (3) we need to apply ising on each couplings
+    AND for (1) and (2) we have an average_couplings (the average_couplings = the couplings for the only model in case (1))
+
+    '''
     print("------------ computation of ising gauge ------------")
     if number_model>1:
         step=1
@@ -240,7 +258,6 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
             average_couplings=np.zeros((L*K,L*K))
             ALL_couplings_ising=[]
             for couplings,model in zip(ALL_couplings,models):
-                #if step%5==0:
                 print("gauge process on model : ", step, "/", number_model)
                 #look if the file with path couplings_path and name couplings_ising_step.txt exists
                 #if it exists, load it and don't do ising_gauge again
@@ -254,16 +271,19 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
                 ALL_couplings_ising.append(couplings)
                 average_couplings += couplings
                 print("couplings after ising gauge shape:", average_couplings.shape)
-
                 step+=1
             average_couplings=average_couplings/number_model
         else:
             print("error with type_average")
-    else: # we do ising on the average of the models
+    else: # we do ising on the average of the models (number_model=1)
         print("only on the couplings from the average model (because selected to do only on 1model)")
         average_couplings=ising_gauge(average_couplings,models[0],model_type,(L,K), data_per_col)
-
+    ##################################################################################
+    ##################################################################################
     
+    ###################################################################################
+    ################# PLOT OF THE COUPLINGS AFTER ISING ###############################
+    ###################################################################################
     print("------------ plot after the ising gauge ------------")
     #plot symmetry of coupling coeff after Ising gauge
     plt.figure()
@@ -273,7 +293,20 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
     plt.grid()
     plt.show()
+    ##################################################################################
+    ##################################################################################
     
+
+    ##################################################################################
+    ################# AVERAGE PRODUCT CORRECTION #####################################
+    ##################################################################################
+    '''
+    There are 2 cases:
+    (1) number_model=1:, number_model>1 and type_average="average_couplings"
+        we apply the average product correction on the average_couplings
+    (2) number_model>1 and type_average="average_couplings_frob":
+        we apply the average product correction on each couplings before averaging them
+    '''
     n=0
     print("---------------- Frobenius ----------------")
     if number_model>1 and type_average=="average_couplings_frob":
@@ -287,13 +320,10 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
                     rows.append(couplings[i*K:(i+1)*K, j*K:(j+1)*K])
                 matrix.append(rows)
             couplings = np.array(matrix)
-
             #frobenius norm
             couplings = np.linalg.norm(couplings, 'fro', (2, 3))
-
             #average product correction
             couplings = average_product_correction(couplings)
-
             #reshape in form (0,1) (0,2) ... (1,2) (1,3) ...
             couplings = np.triu(couplings)
             tmp = []
@@ -325,8 +355,12 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
             for j in range(i+1, L) :
                 tmp.append(average_couplings[i,j]) #(0,1), (0,2),...(1,2),(1,3),....(L-1,L) -> L*(L-1)/2 elements in total
         average_couplings = np.array(tmp)
+    ##################################################################################
+    ##################################################################################
     
-    
+    #################################################################################
+    ################# SAVING THE COUPLINGS ##########################################
+    #################################################################################
     output_directory = os.path.dirname(output_name) # Path for the couplings directory without the last part of the output_name (to stock in the folder)
     # saved the last part as the name of the file
     output_name = os.path.basename(output_name)
@@ -338,8 +372,9 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
             output_directory = os.path.join(output_directory, 'average-models-and-frob/')
         elif type_average=="average_couplings":
             output_directory = os.path.join(output_directory, 'average-couplings/')
-
     os.makedirs(output_directory, exist_ok=True) # Create the directory and its parent directories if they don't exist
     #print the path of: os.path.join(output_directory, output_name)
     print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
     np.savetxt(os.path.join(output_directory, output_name), average_couplings)
+    #################################################################################
+    #################################################################################
