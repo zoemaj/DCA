@@ -55,24 +55,24 @@ Each protein has its own file with its name Z.
                 * Llr-Rrho-Eepsilon-Wwd where L is the learning rate, R is rho, E is epsilon and W is the weight decay (ex with default values: 1.0lr-0.9rho-1e-6epsilon-0wd)
                     default val
             
-* contact-map
+* **contact-map**
     * Z.map where Z is the name of the protein
-* data
+* **data**
     * Z.fasta where Z is the name of the protein
 
-Note that inside each folder of OPTIMIZER.Type-Bbatch you can find the model numeroted, the model averaged for a selection of models numeroted, the png images and a folder for the average-couplings and average-couplings-frob
+Note that inside **each folder of OPTIMIZER.Type-Bbatch** you can find the model numeroted, the model averaged for a selection of models numeroted, the png images and a folder for the average-couplings and average-couplings-frob
 for exemple you can find
-* average-couplings
+* **average-couplings**
     * contact_0-4-300-8.5.png : a contact plot for 300 predictions on the models 0,1,2,3,4
     * couplings_0-4 : the couplings file for the average with the models 0,1,2,3,4
     * errors_positions_0.4.txt
     * errors_0-4.txt
-* average-couplings-and-frob
+* **average-couplings-and-frob**
     * contact_3-5-150-8.5.png : a contact plot for 150 predictions on the models 3,4,5
     * couplings_3-5 : the couplings file for the average with the models 3,4,5
     * errors_positions_3-5.txt
     * errors_3-5.txt
-* average-models
+* **average-models**
     * contact_150-8.5.png : a contact plot for 150 predictions on the models 3,4,5
     * couplings_0-30 : the couplings file for the average with the 30 firstly models
     * errors_positions_0-30.txt
