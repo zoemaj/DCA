@@ -30,28 +30,28 @@ To run these scripts, the user must have the following Python packages installed
 Please keep the same organization of folders and names.
 Each protein has its own file with its name Z.
 
--For each folder Z you have these different folders:
-* preprocessing-X.Xgaps where X.X is a float number indicating the percent of max gaps (ex preprocessing-0.1gaps for 10%)
+- **For each folder Z** you have these different folders:
+* **preprocessing-X.Xgaps** where X.X is a float number indicating the percent of max gaps (ex preprocessing-0.1gaps for 10%)
 
     * Z-preprocessed-X.Xgaps.csv
-    * weights-Y.Y where Y.Y is a float number indicating the percentage of similarity (ex: weights-0.8 for 80%)
+    * **weights-Y.Y** where Y.Y is a float number indicating the percentage of similarity (ex: weights-0.8 for 80%)
 
         * weights-Y.Y.txt
-        * model_MODEL.TYPE-Eepochs where MODEL.TYPE is "linear, non-linear or mix" and E is an int number for the epochs (ex: model_linear-50epochs)
+        * **model_MODEL.TYPE-Eepochs** where MODEL.TYPE is "linear, non-linear or mix" and E is an int number for the epochs (ex: model_linear-50epochs)
 
-            * Adam-Bbatch where B is a int number for the batch size (ex: Adam-64batchs)
+            * **Adam-Bbatch** where B is a int number for the batch size (ex: Adam-64batchs)
                 * Llr-B1beta1-B2beta2-Eepsilon-Wwd-Aamsgrad where L is the learning rate, B1 is beta1, B2 is beta2, E is epsilon, W is the weight decay and A is the amsgrad with T for true and F for false (ex: 0.001lr-0.9beta1-0.999beta2-1e-8epsilon-0wd-Famsgrad)
             
-            * AdamW-Bbatch where B is a int number for the batch size (ex: Adam-64batchs)
+            * **AdamW-Bbatch** where B is a int number for the batch size (ex: Adam-64batchs)
                 * Llr-B1beta1-B2beta2-Eepsilon-Wwd-Aamsgrad where L is the learning rate, B1 is beta1, B2 is beta2, E is epsilon, W is the weight decay and A is the amsgrad (ex: 0.001lr-0.9beta1-0.999beta2-1e-8epsilon-0.01wd-Famsgrad)
 
-            * SDG-Bbatch where B is a int number for the batch size (ex: SDG-32batchs)
+            * **SDG-Bbatch** where B is a int number for the batch size (ex: SDG-32batchs)
                 * Llr-Mmom-Ddampening-Wwd-Nnesterov  where L is the learning rate, M is the momentum, D is the dampening, W is the weight decay and N is the nesterov with F for false and T for true (ex with default values: 0.001lr-0mom-0dampening-0wd-Fnesterov)
             
-            * Adagrad-Bbatch where B is a int number for the batch size (ex: SDG-32batchs)
+            * **Adagrad-Bbatch** where B is a int number for the batch size (ex: SDG-32batchs)
                 * Llr-LDld-Wwd-Ainitaccum-Eeps where L is the learning rate,LD is the learning decay, W is the weight decay, A is the inital accumulator value and E is the epsilon with F for false and T for true (ex with default values:  0.01lr-0ld-0wd-0initaccum-1e-10eps)
 
-            * Adadelta-Bbatch where B is a int number for the batch size (ex: Adadelta-32batch)
+            * **Adadelta-Bbatch** where B is a int number for the batch size (ex: Adadelta-32batch)
                 * Llr-Rrho-Eepsilon-Wwd where L is the learning rate, R is rho, E is epsilon and W is the weight decay (ex with default values: 1.0lr-0.9rho-1e-6epsilon-0wd)
                     default val
             
