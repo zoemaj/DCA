@@ -91,15 +91,15 @@ for exemple you can find
 ## Content and Organization
 This repository is mostly articulated around 5 python modules :
 
-* learning_param.py
-* preprocessing.py
-* weights.py
-* model.py
-* couplings.py
+* **learning_param.py**
+* **preprocessing.py**
+* **weights.py**
+* **model.py**
+* **couplings.py**
 
-(Additionally, we can run the contact map with dcaTools/plotTopContacts)
+(Additionally, we can run the contact map with **dcaTools/plotTopContacts**)
 
-Each of them is accompanied by a main file that can be directly executed from command line. Here is a description of these files :
+Each of them is accompanied by **a main file** that can be directly executed from command line. Here is a description of these files :
 
 ***learning_param.py***
 
@@ -120,6 +120,8 @@ Arguments needed by the main :
     [Adadelta, lr, rho, epsilon, wd]
 * seed : the seed for the random number generator
 * output_name : the name of the output files with the different parameters
+
+**Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_<n_models>models_203_0.008lr with <n_models> the numbers of models to train**
 
 
 
