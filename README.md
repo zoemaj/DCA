@@ -150,6 +150,22 @@ $  python3 main_preprocessing.py PF00226/data/PF00226.fasta 'JD' 0.1 PF00226/pre
 
 ```
 
+***preprocessing_new.py*** [update 05.03.24] -> will replace preprocessing.py
+This module is similar to the previous one but allow the user to keep the information of the taxonomy not only for csv file but also fasta file. The user will answer to some questions in the terminal (keep the taxonomy or not, eukaryota or bacteria or others?, which taxonomy (kingdom, division,...)?
+
+For now only the eukaryota species are possible with taxonomy. Need futur improvement.
+
+file needed: uniprot/eukaryota-species.txt
+
+Arguments needed by the main : (no more need to precise the data_type)
+* input_name : name of the file containing the MSA in fasta or csv format
+* threshold : The threshold for the percentage of gaps in a sequence. 
+* output_name : name that will be used to create the output file
+
+```shell
+$  python3 main_preprocessing.py PF00226/data/PF00226.fasta 0.1 PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv
+```
+
 ***weights.py***
 
 This module takes an MSA preprocessed using preprocessing.py and compute the weights of each sequence. The weights of a sequence is the inverse number of sequences in the MSA that have more than 80% similarity with it. Once computed, the weights will be written in an output file.
