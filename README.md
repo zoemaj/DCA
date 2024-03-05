@@ -1,3 +1,4 @@
+[still in progress....]
 # Neural Network DCA
 
 Welcome to the exploration of DnaJ domain and SIS1 protein sequences by using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. If you just want to read the information about the functions, please go directly to **Content and Organization** :)
