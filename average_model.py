@@ -11,19 +11,13 @@ def compute_average(model_name, n_models) :
             n_models: number of models to average
         output:
             average_model: model average with name model_name_average_0-number_model
-
-            
     '''
 
     print("-------- model average --------")
-
-
     models=[]
     n_models=int(n_models)
     for m in range(n_models):          
         models.append(torch.load(model_name+'_' + str(m)))
-   
-
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
     print("device: ", device)

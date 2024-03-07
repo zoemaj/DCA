@@ -54,7 +54,7 @@ def preprocessing(input_name, threshold, output_name) :
                 while R2!='K' and R2!='D':
                     input("Please write K or D ")
                 #load the file euakaryota-species.txt and create a dictionary with the node and the division or the kingdom
-                with open("uniprot/eukaryota-species.txt", "r") as file:
+                with open("uniprot-with-tax/eukaryota-species.txt", "r") as file:
                     lines = file.readlines()
                     #create a dictionary with the node and the division or the kingdom
                     E_dic = {}
