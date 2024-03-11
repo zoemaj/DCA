@@ -1,5 +1,7 @@
 [still in progress....]
+
 last update 11.03.24
+
 # Neural Network DCA
 -----------------------------------------------------------
 
@@ -386,24 +388,24 @@ Example of usage :
 
 Preprocessing:
 ```shell
-$ python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta 1.0 TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv
+$ python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv
 ```
 Weights:
 ```shell
-$ python3 main_weights.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv 0.3 TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt
+$ python3 main_weights.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt -threshold 0.3
 ```
 Learning Parameters:
 ```shell
-$ python3 main_learning_param.py 15 32 linear 2 '(0.7,0.7)' 0 "[SGD,0.008, 0.01,0,0, False]" 203 Parameters_learning/SDG_15_2models_203_0.008lr
+$ python3 main_learning_param.py 15 32 linear 2 203 Parameters_learning/SDG_15_2models_203_0.008lr
 ```
 Model:
 ``` shell
-$ python3 main_model.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt square TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov /
+$ python3 main_model.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov
 ```
 Couplings:
 ```shell
 
-$ python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/model linear 63 21 TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/data_per_col.txt 2 "average_couplings_frob" TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/couplings
+$ python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/model 63 21 -number_models 2 -type_average "average_couplings_frob" 
 ```
 
 
