@@ -359,6 +359,8 @@ for data P25294_SIS1_YEAST -> L=352, K=21
 for data A6ZS16_YEAS7 -> L=409, K=21
 ...
 
+BE CAREFUL: need to take L+1 if we have chose with taxonomy
+
 ***
 In addition to these 4 modules. The directory dcaTools contains [3 scripts](https://gitlab.com/ducciomalinverni/dcaTools.git) that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found [here](https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16).
 
