@@ -20,6 +20,8 @@ To run these scripts, the user must have the following Python packages installed
 
 * numpy
 * pandas
+* csv
+* gzip
 * biopython
 * numba
 * torch
@@ -56,14 +58,18 @@ Each protein has its own file with its name Z.
                 * Llr-Rrho-Eepsilon-Wwd where L is the learning rate, R is rho, E is epsilon and W is the weight decay (ex with default values: 1.0lr-0.9rho-1e-6epsilon-0wd)
                     default val
             
-* **contact-map**
+* **map**
     * Z.map where Z is the name of the protein
-* **data**
+* **pdb**
+    * Z.pdb where Z is the name of the protein
+* **hmm**
+    * F.hmm where F is the name of the Family of the protein Z
+* **data** (Note: the folder data contain proteins used for my master of specialisation and the folder data-MP for the data used in my master project. Please feel free to create your own data folder.)
     * Z.fasta where Z is the name of the protein
 
 Note that inside **each folder of OPTIMIZER.Type-Bbatch** you can find the model numeroted, the model averaged for a selection of models numeroted, the png images and a folder for the average-couplings and average-couplings-frob
 for exemple you can find
-* **average-couplings**
+* **average-couplings** 
     * contact_0-4-300-8.5.png : a contact plot for 300 predictions on the models 0,1,2,3,4
     * couplings_0-4 : the couplings file for the average with the models 0,1,2,3,4
     * errors_positions_0.4.txt
@@ -90,13 +96,22 @@ for exemple you can find
 * model_average_0-4
 
 ## Content and Organization
-This repository is mostly articulated around 5 python modules :
-
-* **learning_param.py**
-* **preprocessing.py**
-* **weights.py**
-* **model.py**
-* **couplings.py**
+There are two parts:
+**PART I:**
+The construction of the fasta file and the structure 2D map for the contact prediction. 
+In this part you will:
+   - align proteins from homologuous sequences data (uniprot, blast, hmm.org)
+   - construct a structure map file: **dcaTools/mapPDB**
+   - define the taxonomy of a sequence: **write_list.py**
+   - preprocess the sequences to remove the ones with too much gaps: **preprocessing.py**
+     
+**PART II:**
+The preparation for the model building and learning, and the couplings between the different positions of amino acids.
+In this part you will:
+   - define the proprieties of your model(s), the batchs, number of models, optimizer, ... with **learning_param.py**
+   - determine the weights of each sequences to make the distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". If a sequence is very semilar with others, its weight will be low to compensate its dominance: **weights.py**
+   - build and train the model(s): **model.py**
+   - determine the couplings between the positions of amino acids **couplings.py**
 
 (Additionally, we can run the contact map with **dcaTools/plotTopContacts**)
 
