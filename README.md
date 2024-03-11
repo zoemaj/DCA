@@ -97,19 +97,25 @@ for exemple you can find
 
 ## Content and Organization
 There are two parts:
+
+
 **PART I:**
+
 The construction of the fasta file and the structure 2D map for the contact prediction. 
 In this part you will:
+
    - align proteins from homologuous sequences data (uniprot, blast, hmm.org)
    - construct a structure map file: **dcaTools/mapPDB**
    - define the taxonomy of a sequence: **write_list.py**
    - preprocess the sequences to remove the ones with too much gaps: **preprocessing.py**
      
 **PART II:**
+
 The preparation for the model building and learning, and the couplings between the different positions of amino acids.
 In this part you will:
+
    - define the proprieties of your model(s), the batchs, number of models, optimizer, ... with **learning_param.py**
-   - determine the weights of each sequences to make the distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". If a sequence is very semilar with others, its weight will be low to compensate its dominance: **weights.py**
+   - determine the weights of each sequences to make the distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". If a sequence is very semilar with others, its weight will be low to compensate its dominance): **weights.py**
    - build and train the model(s): **model.py**
    - determine the couplings between the positions of amino acids **couplings.py**
 
