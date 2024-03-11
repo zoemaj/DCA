@@ -231,21 +231,29 @@ Arguments needed by the main :
 * batchs : batch_size used during the training, int
 * modeL-type : type of the model: linear, non-linear or mix
 * n_models : the numbers of models to train before to keep the average on them or apply the average on their couplings
-* separations : the proportion that we keep for the training, the validation and the test '(perc_train,perc_val)' such that we take perc_train% of the data, (perc_train-perc_val)% of the remained data and finaly what is still there for the test data
-* nb_hidden_neurons : the number of hidden_neurons (0 for linear type)
-* optimizer : a list with '[optimizer_name,optimizer_param1,...,optimizer_paramk]' if there are not enough parameters for this type of optimizer the last ones will be fill by default values
+* seed : the seed for the random number generator
+* output_name : the name of the output files with the different parameters
+* optimizer : a list with optimizer_name,optimizer_param1,...,optimizer_paramk if there are not enough parameters for this type of optimizer the last ones will be fill by default values
     [Adam, lr, beta1, beta2, epsilon, wd, amsgrad]
     [AdamW, lr, beta1, beta2, epsilon, wd, amsgrad]
     [SGD, lr, ,momentum, damping, wd, nesterov]
     [Adagrad, lr, lr_decay, wd, initial accumular value,epsilon]
     [Adadelta, lr, rho, epsilon, wd]
-* seed : the seed for the random number generator
-* output_name : the name of the output files with the different parameters
+  default= SGD, 0.008, 0.01, 0, 0, False
+* separations : the proportion that we keep for the training, the validation and the test perc_train,perc_val such that we take perc_train% of the data, (perc_train-perc_val)% of the remained data and finaly what is still there for the test data. default=(0.7,0.7)
+* nb_hidden_neurons : the number of hidden_neurons (Default=0, linear case)
 
 Example of usage :
 
 ```shell
-$ python3 main_learning_param.py 50 32 linear 2 '(0.7,0.7)' 0 "[SGD,0.008, 0.01,0,0, False]" 203 Parameters_learning/SDG_50_2models_203_0.008lr
+$ python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr SGD,0.005,0.01,0,0,False 203
+0.8,0.8  
+```
+or by using the default values:
+
+```shell
+$ python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr
+
 ```
 
 ***weights.py***
