@@ -126,7 +126,7 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 
 ### Part I: description of the files
 
-**How find your fasta file?**
+***How find your fasta file?***
 ---------------------------
 
 -You can use [uniprot](https://www.uniprot.org) to find some homologous sequences of your choice.
@@ -135,13 +135,13 @@ Each of them is accompanied by **a main file** that can be directly executed fro
     
 
 
-**How find your hmm file (indispensable for alignment)?**
+***How find your hmm file (indispensable for alignment)?***
 ------------------------------------------------------------
 
 -You can type the name of your family in "search by text" (Hsp70, GrpE, ...) on [Interpro](https://www.ebi.ac.uk/interpro/) and download the hmm file ***from PFAM source file*** in the section ***curration***
 
 
-**Now that you have your fasta and hmm files, how align the sequences ?**
+***Now that you have your fasta and hmm files, how align the sequences ?***
 -----------------------------------------------------------------
 
 -Please read the protocole from [hmmer.org](http://hmmer.org)
@@ -149,32 +149,54 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 -After downloading the folder hmmer-3.4 (from hmmer.org) you can use this command in the terminal:
     (you need to be in the folder hmmer-3.4)
 
-    ```shell
-    $   hmmalign path_file_hmm path_file_fasta > path_file_sto
-    ```
+ ```shell
+ $   hmmalign path_file_hmm path_file_fasta > path_file_sto
+ ```
 
     This should export you a stockolm file in your folder
 
 
-**Termine with a last transformation**
+***End with a last transformation***
 -----------------------------------------------------------------
 Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. You can finally use ***alignment.py*** provided in this folder. This will convert your stockolm file in fasta format and then will adjust the sequences according to a reference sequence. Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN. You will have a new alignment adjusted with BiP_HUMAN.
 
-    ```shell
-        $   python3  main_alignment.py path_seq_ref path_file_sto
-    ```
+ ```shell
+     $   python3  main_alignment.py path_seq_ref path_file_sto
+ ```
 
 (Note that if you already have your stockolm file converted into fasta file, you can still use this function.)
 
 Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.
 
-**How align two family together?**
+***How align two family together?***
 -----------------------------------------------------------------
 You first need to do the previous steps to have correct fasta files with sequences aligned in function of a reference sequence. Then you can use the following command:
 
-    ```shell
-        $   python3  main_TwoInOne.py file1 file2
-    ```
+ ```shell
+     $   python3  main_TwoInOne.py file1 file2
+ ```
+***How process you file?***
+-----------------------------------------------------------------
+
+ ***preprocessing.py*** 
+ 
+The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)?
+
+folder needed: uniprot-tax
+
+Arguments needed by the main : (no more need to precise the data_type)
+* input_name : name of the file containing the MSA in fasta or csv format
+* output_name : name that will be used to create the output file
+* threshold : The threshold for the percentage of gaps in a sequence. (Default 1.0)
+
+
+```shell 
+$  python3 main_preprocessing.py data/PF00226.fasta PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv 0.1
+```
+
+```shell
+$  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta DnaK-with-tax-new/preprocessing-1.0gaps/preprocessed-1.0gaps
+```
 
 ### Part II: description of the files
 
@@ -210,22 +232,6 @@ $ python3 main_learning_param.py 50 32 linear 2 '(0.7,0.7)' 0 "[SGD,0.008, 0.01,
 ```
 
 
-***preprocessing.py***
-
-This module takes an MSA in fasta format (as it can be dowloaded on Pfam) and preprocess it to make it suitable for the module model.py. It removes inserts, discard sequences with more than a certain value of percentage gaps (can be modifier into the file), encodes the amino acid / gap symbols into numbers and write a csv file with the result. and print MSA.shape (number of sequences, length of one sequence)
-
-Arguments needed by the main :
-* input_name : name of the file containing the MSA in fasta or csv format
-* data_type :Only for csv file (will be ignored if your file is in fasta). Please give the type of data 'full_prot' or 'JD' if you want to consider the data_sequences class. If you don't want to consider the class please write 'full_prot_no_class' or 'JD_no_class'.
-* threshold : The threshold for the percentage of gaps in a sequence. 
-* output_name : name that will be used to create the output file
-
-Example of usage :
-
-```shell
-$  python3 main_preprocessing.py PF00226/data/PF00226.fasta 'JD' 0.1 PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv
-
-```
 
 ***preprocessing_new.py*** [update 05.03.24] -> will replace preprocessing.py
 This module is similar to the previous one but allow the user to keep the information of the taxonomy not only for csv file but also fasta file. The user will answer to some questions in the terminal (keep the taxonomy or not, eukaryota or bacteria or others?, which taxonomy (kingdom, division,...)?
