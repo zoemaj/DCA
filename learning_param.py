@@ -1,5 +1,5 @@
    
-def execute(epochs, batchs, model_type, n_models,separation, optimizer, seed, output_name, nb_hidden_neurons=0):
+def execute(epochs, batchs, model_type, n_models, seed, output_name, optimizer="/",separation="/",nb_hidden_neurons="0"):
     '''  save as a .csv file the different parameters 
     input: epochs -> int
     batchs -> int
@@ -8,6 +8,7 @@ def execute(epochs, batchs, model_type, n_models,separation, optimizer, seed, ou
     list_dataset -> list of 3 bool elements corresponding to [val, test]
     output: a file named as output_name.txt
     '''
+
     # create the csv file
     file = open(output_name+".txt", "w")
     # write the parameters
@@ -19,33 +20,33 @@ def execute(epochs, batchs, model_type, n_models,separation, optimizer, seed, ou
     file.write("seed: "+str(seed)+"\n")
 
     #separation is loaded as "(int1,int1)" and we want to have int1:
-    separation_number = separation.replace("(","")
-    separation_number = separation_number.replace(")","")
-    separation_number = separation_number.split(",")
-    if separation_number[1] < separation_number[0]:
+    if separation=="/":
+        separation=["0.7,0.7"]
+    #print(separation) #['0.7,0.7']
+    separation=separation[0].split(",")
+    #print(separation) #['0.7', '0.7']
+    separation[0]=float(separation[0])
+    separation[1]=float(separation[1])
+    if separation[1] < separation[0]:
         print("Error: the second number of the separation is smaller than the first one")
         return
-    if separation_number[0] == separation_number[1]:
+    if separation[0] == separation[1]:
         file.write("Validation: "+"False"+"\n")
         file.write("Test: "+"True"+"\n")
 
-    elif separation_number[0]+separation_number[1]==1:
+    elif separation[0]+separation[1]==1:
         file.write("Validation: "+"True"+"\n")
         file.write("Test:"+"False"+"\n")
     else:
         file.write("Validation: "+"True"+"\n")
         file.write("Test: "+"True"+"\n")
-    file.write("separation: "+separation+"\n")
+    file.write("separation: ("+str(separation[0])+","+str(separation[1])+")\n")
 
 
-
+    if optimizer=="/":
+        optimizer=["SGD,0.008,0.01,0,0"]
     #write optimizer name : [the parameters separated by comma]
-    #we need to convert our list in string "[model_name, param1, param2, ...]" into a list [model_name, param1, param2, ...]
-    optimizer = optimizer.replace("[","")
-    optimizer = optimizer.replace("]","")
-    optimizer = optimizer.replace(" ","")
-    optimizer = optimizer.split(",")
-
+    optimizer=optimizer[0].split(",")
     #if optimizer[0] is not "Adam" or "AdamW" or "SGD" or "Adagrad" or "Adadelta" return
     name_optimizer=optimizer[0]
 
