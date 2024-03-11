@@ -1,5 +1,5 @@
    
-def execute(epochs, batchs, model_type, n_models,separation, optimizer, nb_hidden_neurons, seed, output_name):
+def execute(epochs, batchs, model_type, n_models,separation, optimizer, seed, output_name, nb_hidden_neurons=0):
     '''  save as a .csv file the different parameters 
     input: epochs -> int
     batchs -> int
