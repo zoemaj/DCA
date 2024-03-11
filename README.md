@@ -211,13 +211,17 @@ Arguments needed by the main :
 $  python3 main_preprocessing.py data/PF00226.fasta PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv 0.1
 ```
 
+exemple using the default values:
+
 ```shell
-$  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta DnaK-with-tax-new/preprocessing-1.0gaps/preprocessed-1.0gaps
+$  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta DnaK-with-tax/preprocessing-1.0gaps/preprocessed-1.0gaps
 ```
 
 ### Part II: description of the files
 
 ***learning_param.py***
+
+**Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_<n_models>models_203_0.008lr with <n_models> the numbers of models to train**
 
 This module takes 
 
@@ -237,33 +241,10 @@ Arguments needed by the main :
 * seed : the seed for the random number generator
 * output_name : the name of the output files with the different parameters
 
-**Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_<n_models>models_203_0.008lr with <n_models> the numbers of models to train**
-
-
-
-
 Example of usage :
 
 ```shell
 $ python3 main_learning_param.py 50 32 linear 2 '(0.7,0.7)' 0 "[SGD,0.008, 0.01,0,0, False]" 203 Parameters_learning/SDG_50_2models_203_0.008lr
-```
-
-
-
-***preprocessing_new.py*** [update 05.03.24] -> will replace preprocessing.py
-This module is similar to the previous one but allow the user to keep the information of the taxonomy not only for csv file but also fasta file. The user will answer to some questions in the terminal (keep the taxonomy or not, eukaryota or bacteria or others?, which taxonomy (kingdom, division,...)?
-
-For now only the eukaryota species are possible with taxonomy. Need futur improvement.
-
-file needed: uniprot/eukaryota-species.txt
-
-Arguments needed by the main : (no more need to precise the data_type)
-* input_name : name of the file containing the MSA in fasta or csv format
-* threshold : The threshold for the percentage of gaps in a sequence. 
-* output_name : name that will be used to create the output file
-
-```shell
-$  python3 main_preprocessing.py PF00226/data/PF00226.fasta 0.1 PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv
 ```
 
 ***weights.py***
@@ -273,23 +254,32 @@ This module takes an MSA preprocessed using preprocessing.py and compute the wei
 
 Arguments needed by the main :
 * input_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
-* threshold : The percentage of simulutude accepted
 * ouput_name : name for the output file containing the weights
+* threshold : The percentage of simulutude accepted. Default=0.8
+
 
 ```shell
-$ python3 main_weights.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv 0.8 PF00226/preprocessing-0.1gapps/weights-0.8/PF00226_weights-0.8.txt
+$ python3 main_weights.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gapps/weights-0.8/PF00226_weights-0.8.txt 0.8
 
 ```
 
+Exemple with default value:
+
+```shell
+$ python3 main_weights.py DnaK-with-tax/preprocessing-1.0gaps/preprocessed-1.0gaps DnaK-with-tax/preprocessing-1.0gaps/weights-0.8/weights-0.8.txt
+
+```
 
 
 ***model.py***
 
 This module builds and trains a neural network on the MSA to be able to predict the value of a residue given all other residues of the sequence.
-The user can choose between 3 architectures for the neural network :
+
+The user can choose between 3 architectures for the neural network (by default: linear) :
+
 * linear : this is simply a linear classifier (with softmax activation on the output layer and cross entropy loss) whose input and output are the residues and where the output residues are connected to every input residues exept from themselves (in order to avoid a trivial identity)
-* non-linear : this model adds a hidden layer to the network, the architecture is designed such that the output residues are disconnected from the corresponding input residues. Two activation function are available for the hidden layer, a custom activation that squares the output of the hidden layer ("square") and a tanh activation ("tanh")
-* mix : this model is a combination of the first two, the input and output neurons are connected both linearly and via a hidden layer. Both the square and tanh activations are possible for the hidden layer
+* non-linear : this model adds a hidden layer to the network, the architecture is designed such that the output residues are disconnected from the corresponding input residues. Two activation function are available for the hidden layer, a custom activation that squares the output of the hidden layer ("square") and a tanh activation ("tanh"). **need to be implemented, not actually working**
+* mix : this model is a combination of the first two, the input and output neurons are connected both linearly and via a hidden layer. Both the square and tanh activations are possible for the hidden layer **need to be implemented, not actually working**
 
 After training, the learning curve will be plotted and the model will be saved as well as the error rate after each epoch and the final error rate per residue.
 
@@ -299,14 +289,14 @@ Arguments needed by the main :
 * MSA_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
-* activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh"
 * path: path where to load the file 
-* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name,error_postions + output_name). if you want nothings juste write / for the output_name.
+* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-<n_models>,error_postions + output_name+0-<n_models>). Default:model_average_0-<n_models>
+* activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". Default=square. 
 
 Example of usage :
 
 ``` shell
-$ python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt square PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 /
+$ python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 
 ```
 
 ***couplings.py***
@@ -316,27 +306,30 @@ the matrix of couplings symetrical by averaging with its transpose, takes the Fr
 
 Arguments needed by the main :
 * model_name : name of the file containing the saved model from model.py. For number_models=1 write the path of the model, for number_models>1 write the path of the model without the numbers. As instance if you have model_test_1, model_test_2 you juste need to write model_test
-* model_type : type of the model, can be "linear", "non-linear" or "mix"
 * L : length of the sequences (second dimension of the preprocessed MSA)
 * K : number of categories for the residues (21 if no considering class, 29 in general if considering class)
-* data_per_col : number of possible a.a per column in the MSA (normally in the same place than the model(s))
-* number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius
+* number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. Default=1
 * type average : if number_models=1 this is neglected. Otherwise it specifies the kind of average 
-    ("average_couplings" or "average_couplings_frob").
-* output_name : path of the output file that will contain the coupling coefficients. 
+    ("average_couplings" or "average_couplings_frob"). Default='average_couplings'
+* output_name : path of the output file that will contain the coupling coefficients. Default= "path(model_name)/<type_average>/couplings"
+* figure : Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. Default: False
+* data_per_col : path for data_per_col.txt representing the number of possible a.a per column in the MSA (created during model.py) (Default: in the same place than the model(s))
+* model_type : type of the model, can be "linear", "non-linear" or "mix". Default: linear
 
 Example of usage :
 
-```shell
 
-$ python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model linear 63 21 PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/data_per_col.txt 5 'average_couplings_frob' PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/couplings
+```shell
+$ python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 5
+
 ```
 for data PF00226 -> L=63, K=21
 for data P25294_SIS1_YEAST -> L=352, K=21
 for data A6ZS16_YEAS7 -> L=409, K=21
+...
 
 ***
-In addition to these 4 modules. The directory dcaTools contains 3 scripts downloaded from https://gitlab.com/ducciomalinverni/dcaTools.git that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found here https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16.
+In addition to these 4 modules. The directory dcaTools contains [3 scripts](https://gitlab.com/ducciomalinverni/dcaTools.git) that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found [here](https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16).
 
 ***extract the contact plot***
 This module plot the predicted contact on the ones predicted by alpha fold
