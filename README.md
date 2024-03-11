@@ -1,4 +1,5 @@
 [still in progress....]
+last update 11.03.24
 # Neural Network DCA
 -----------------------------------------------------------
 
