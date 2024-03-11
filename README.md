@@ -308,6 +308,19 @@ Example of usage :
 $ python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 
 ```
 
+**What if you want to average several model(s) from a same folder?**
+This case can happen if for example you have already made 5 models with seed203 and 5 others ones with seed24. In this case you can put every models in the same folder called for example "10models" and rename correctly the models going from model_0 to model_9. (Don't forget to add a txt file (with nano <name_txt_file>) to indicate which model was made with which seed, parameters a.s.o.). Then don't worry a function will make an average of your models. You just need to use :
+
+   **average_model.py**
+   * model_name : The name of the models to average (without the index number _i)
+   * n_models : The number of models to average
+   ``` shell
+   $ python3 main_average_model.py BiP/preprocessing-1.0gaps/weights-0.8/model_linear-50epochs/10models/model 10
+
+   ```
+   
+
+
 ***couplings.py***
 
 This module extracts from the trained model (the output of model.py) the coupling coefficients (which describe the interaction between any two residues for each categories) and applies to them a series of operations to make them suitable for contact prediction. It applies the Ising gauge to the coupling coefficients, makes
