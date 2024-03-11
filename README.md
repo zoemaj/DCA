@@ -1,9 +1,12 @@
 [still in progress....]
 
-last update 11.03.24####
-Zoé Majeux####
-EPFL, Laboratoire de biophysique statistique (LBS)####
-Prof. Paolo De Los Rios####
+last update 11.03.24
+
+Zoé Majeux
+
+EPFL, Laboratoire de biophysique statistique (LBS)
+
+Prof. Paolo De Los Rios
 
 
 # Neural Network DCA
