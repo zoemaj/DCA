@@ -1,5 +1,6 @@
 [still in progress....]
 # Neural Network DCA
+-----------------------------------------------------------
 
 Welcome to the exploration of DnaJ domain and SIS1 protein sequences by using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. If you just want to read the information about the functions, please go directly to **Content and Organization** :)
 
@@ -8,14 +9,17 @@ If you want to know everything, such as what is the goal of this project or how 
 If you want to test some functions with a short set of sequences please go directly to **TRY ME**
 
 ## Description
+-----------------------------------------------------------
 The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to predict the type of a residue given all other residues in a sequence and then to extract the knowledge learned by the network to do contact prediction.
 
 ## What about chaperons?
+-----------------------------------------------------------
 Misfolded proteins can lead to aggregation, resulting in neuromuscular and neurodegenerative diseases, or lysosomal dysfunction. Heat shock proteins 70 (HSP70)
 play a crucial role as chaperones in various protein folding processes, involving ATP hydrolysis facilitated by the J-domain binding to HSP70. Recent research have explored DnaJ domain and SIS1 protein sequences using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. However, inappropriate results
 necessitated a new approach, involving code modifications and optimization. These changes include a new couplings formulation, a variable number of amino acid values per position, a smaller batch size, hyperparameter tuning with different optimizers (Adam, AdamW, SGD, Adagrad, and AdaDelta), a comparison by taking the average across different models or couplings, or on the Frobenius norms. Additionally, a comparison was conducted by learning the taxonomy of the sequence or not. Furthermore, protein contact predictions were also performed for the Mitochondrial protein import protein MAS5 (gene YDJ1).
 
 ## Installation
+-----------------------------------------------------------
 To run these scripts, the user must have the following Python packages installed :
 
 * numpy
@@ -30,6 +34,7 @@ To run these scripts, the user must have the following Python packages installed
 * os
 
 ## Orgnanization of the files
+-----------------------------------------------------------
 Please keep the same organization of folders and names.
 Each protein has its own file with its name Z.
 
@@ -96,6 +101,7 @@ for exemple you can find
 * model_average_0-4
 
 ## Content and Organization
+-----------------------------------------------------------
 There are two parts:
 
 
@@ -125,9 +131,9 @@ In this part you will:
 Each of them is accompanied by **a main file** that can be directly executed from command line.
 
 ### Part I: description of the files
+-----------------------------------------------------------
 
 ***How find your fasta file?***
----------------------------
 
 -You can use [uniprot](https://www.uniprot.org) to find some homologous sequences of your choice.
 
@@ -136,13 +142,13 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 
 
 ***How find your hmm file (indispensable for alignment)?***
-------------------------------------------------------------
+
 
 -You can type the name of your family in "search by text" (Hsp70, GrpE, ...) on [Interpro](https://www.ebi.ac.uk/interpro/) and download the hmm file ***from PFAM source file*** in the section ***curration***
 
 
 ***Now that you have your fasta and hmm files, how align the sequences ?***
------------------------------------------------------------------
+
 
 -Please read the protocole from [hmmer.org](http://hmmer.org)
 
@@ -157,7 +163,7 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 
 
 ***End with a last transformation***
------------------------------------------------------------------
+
 Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. You can finally use ***alignment.py*** provided in this folder. This will convert your stockolm file in fasta format and then will adjust the sequences according to a reference sequence. Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN. You will have a new alignment adjusted with BiP_HUMAN.
 
  ```shell
@@ -169,22 +175,33 @@ Even if hmmer.org is an amazing tool, it will extract the new sequences with a l
 Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.
 
 ***How align two family together?***
------------------------------------------------------------------
+
 You first need to do the previous steps to have correct fasta files with sequences aligned in function of a reference sequence. Then you can use the following command:
 
  ```shell
      $   python3  main_TwoInOne.py file1 file2
  ```
-***How process you file?***
------------------------------------------------------------------
+***How define the taxonomy of a sequence with write_list.py***
+folder needed: uniprot-tax/list
 
- ***preprocessing.py*** 
+Before to use this module you need to download a tsv or xls of your homologous proteins file from uniprot. This file need to contain the attributes "Organism (ID)" and "Taxonomic lineage". You can save the file in the folder uniprot-tax/list.
+
+This module will read your file and create a csv file (in the folder uniprot-tax) containing each organism ID with specific attributes of the taxonomic lineage determined by the user during inputs. This will also create summary txt files, for each attribute, giving the unique elements and number of occurences.
+
+Arguments needed by the main :
+* path_file : The path where to find the list from uniprot.
+  
+```shell 
+$  python3 main_write_list.py uniprot-tax/list/bip-taxonomy.xls
+```
+
+***How process you file with preprocessing.py***
  
-The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)?
+The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)? If you want to use the taxonomy, you absolutly need to create the appropriate file with write_list.py
 
 folder needed: uniprot-tax
 
-Arguments needed by the main : (no more need to precise the data_type)
+Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
 * output_name : name that will be used to create the output file
 * threshold : The threshold for the percentage of gaps in a sequence. (Default 1.0)
