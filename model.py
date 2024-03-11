@@ -3,7 +3,15 @@ import torch
 from torch import nn
 import matplotlib.pyplot as plt
 import os
-#nohapƒ
+import psutil
+import subprocess
+from tqdm import tqdm
+
+# Function to print CPU usage percentage -> not used for now but can be useful in case of debugging
+def print_cpu_usage():
+    cpu_percent = psutil.cpu_percent(interval=1)  # Get CPU usage percentage for the last 1 second
+    print("CPU Usage:", cpu_percent, "%")
+
 ####################################################################################################################################
 ###### The following class has not been modified from Aude Maier code (2022), is not used in this version ##########################
 ###### It is still there if one wants to adapt it and use it in the future #########################################################
@@ -16,6 +24,48 @@ class SquareActivation(nn.Module) :
 ####################################################################################################################################
 ####################################################################################################################################
 
+####################################################################################################################################
+########################## CREATION OF THE MASKED   ################################################################################
+####################################################################################################################################
+def generate_indices_mask(L,K,data_per_col,path):
+    ''' 
+    This function is used to generate the indices that will be used to mask the model.
+    The indices are written in a txt file that will be saved in the folder.
+      (like this we do not need to stock the list of indices and we don't need to compute them again at each time)
+    for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
+    we mask also the links between the amino acids that are not possible at a position (identities)
+    input:
+        L: length of the sequences
+        K: number of different amino acids
+        data_per_col: for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
+        path: path where the file will be saved
+    '''
+    #check if the file already exists
+    if os.path.exists(path+"/indice_mask.txt"):
+      #in this case, we will not compute it again
+      print("The file already exists, we will not compute it again")
+      print("You can find it at: ",path+"/indice_mask.txt")
+      return
+    else: 
+      print("Writing the indices_mask...")
+      with open(path+"/indice_mask.txt", "w") as file:
+        for j in range(0, L * K, K):
+            for a in range(j, j + K):
+                for b in range(j, j + K):
+                    file.write(str(a) + " " + str(b) + "\n")
+        for col_i in range(L):
+            for amino in range(K):
+                if data_per_col[amino, col_i] == 1:
+                    index_amino = col_i * K + amino
+                    for b in range(col_i * K):
+                        file.write(str(index_amino) + " " + str(b) + "\n")
+                        file.write(str(b) + " " + str(index_amino) + "\n")
+                    for b in range((col_i + 1) * K, L * K):
+                        file.write(str(index_amino) + " " + str(b) + "\n")
+                        file.write(str(b) + " " + str(index_amino) + "\n")
+      print("The file has been successfully created : ",path+"/indice_mask.txt")
+    return
+
 class MaskedLinear(nn.Module):
   """
   This function is usefull to remove links between some amino acids a_m,k
@@ -27,11 +77,18 @@ class MaskedLinear(nn.Module):
     out_dim: number of output features
     indices_mask: list of tuples of int
     """
+    #print cpu usage
     super(MaskedLinear, self).__init__()
     self.linear = nn.Linear(in_dim, out_dim) #MaskedLinear is made of a linear layer
     #Force the weights indicated by indices_mask to be zero by use of a mask
     self.mask = torch.zeros([out_dim, in_dim]).bool()
-    for a, b in indices_mask : self.mask[(a, b)] = 1
+    #for a, b in indices_mask : self.mask[(a, b)] = 1
+    #now indices_mask is a txt file that contains the indices of the weights that must be null
+    with open(indices_mask, "r") as file:
+        for line in file:
+            a, b = line.split()
+            a, b = int(a), int(b)
+            self.mask[a, b] = 1
     self.linear.weight.data[self.mask] = 0 # zero out bad weights
     #modify backward_hood to prevent changes to the masked weights
     def backward_hook(grad):
@@ -45,16 +102,19 @@ class MaskedLinear(nn.Module):
     input = input.to(self.linear.weight.device).float()
     # Use torch.nn.functional.linear to apply the modified weights
     return nn.functional.linear(input, self.linear.weight, self.linear.bias)
+####################################################################################################################################
+####################################################################################################################################
+
 
 class LinearNetwork(nn.Module):
   'linear model with softmax activation on the output layer applied on residue positions'
-
   def __init__(self, indices_mask, in_dim, original_shape):
     """
     indices_mask: list of input and output neurons that must be disconnected
     in_dim: dimension of input layer
     original_shape: original shape of the MSA (N,L,K)
     """
+    #print cpu usage
     super(LinearNetwork, self).__init__()
     self.masked_linear = MaskedLinear(in_dim, in_dim, indices_mask) #The masked linear layer to remove some connections
     self.softmax = nn.Softmax(dim=2) #the softmax activation function
@@ -68,6 +128,7 @@ class LinearNetwork(nn.Module):
     x = self.softmax(x) #apply softmax
     x = torch.reshape(x, (len(x), self.L*self.K)) #reshape to have the same shape as the input
     return x
+  
 
 ####################################################################################################################################
 ###### The following classes have not been modified from Aude Maier code (2022), is not used in this version ######################
@@ -244,7 +305,7 @@ def error_positions(data, labels, model, original_shape) :
       errors_positions.append(1 - correct / N)
     return errors_positions
   
-def get_data_labels(MSA_file, weights_file, max_size = None) :
+def get_data_labels(MSA_file, weights_file, device, max_size = None) :
   """
   This function is used to get the input data and the labels from the MSA (N,L). It also returns the shape of the MSA (N,L,K)
   and a new file of shape (K,L) data_per_col that will be used to mask the model when an amino acid from 1 to K is not possible at a position
@@ -282,6 +343,8 @@ def get_data_labels(MSA_file, weights_file, max_size = None) :
       for k in range(K):
           if k in col:
               data_per_col[k,i]=0
+  #data_per_col = torch.tensor(data_per_col, device=device)
+
   #the labels are the weighted data
   labels = weights * new_data
   #reshape such that each sequence has only one dimension
@@ -305,10 +368,7 @@ def create_datasets(data, labels, separations) :
   training_set = Dataset(train_indices, data, labels)
   validation_set = Dataset(validation_indices, data, labels)
   test_set = Dataset(test_indices, data, labels)
-  print("size training_set",training_set.data.shape)
-  print("size validation_set",validation_set.data.shape)
-  print("size test_set",test_set.data.shape)
-  print("the datasets have been successfully created")
+  
   return training_set, validation_set, test_set
 def write_the_optimizer(model, optimizer):
     ''' 
@@ -330,30 +390,98 @@ def write_the_optimizer(model, optimizer):
         print('optimizer name', optimizer_name)
         print("Error: optimizer list is not correct or need to be defined in file model.py")
         return
-def build_and_train_model(data, labels, original_shape, data_per_col, model_type, n_models, optimizer, activation, batch_size, max_epochs,nb_hidden_neurons, validation,test, separation) :
+    
+def build_and_train_model(data,labels, original_shape, separation, model_type, max_epochs, batch_size, validation, test, optim, device, use_cuda, path):
+  list_train_err = []
+  list_val_err = []
+  list_test_err = []
+  print("Training duration : ", max_epochs, "epochs")
+  print("Model type : ", model_type)
+  print("creation datasets...")
+  training_set, validation_set, test_set = create_datasets(data, labels, separation)
+  print("size training_set",training_set.data.shape)
+  print("size validation_set",validation_set.data.shape)
+  print("size test_set",test_set.data.shape)
+  print("the datasets have been successfully created")
+  params = {'batch_size': batch_size, #modif
+            'shuffle': True,
+            'num_workers':1,
+            'pin_memory': True if use_cuda else False} #change 28.02.24 for the cluster
+    #        'num_workers': 2}
+    #create data loader for the training_set
+  training_generator = torch.utils.data.DataLoader(training_set, **params)
+   #define the model according to model_type (linear, non-linear or mix) and, if not linear, activation (square or tanh)
+  if model_type == "linear" :
+    print("-----------------------------")
+    ##########################################################################
+    ################# CREATE THE LIST OF MODELS AND OPTIMIZERS ###############
+    ##########################################################################
+    print("Initialisation of the model...")   
+    model=LinearNetwork(path+"/indice_mask.txt", training_set.labels.shape[1], original_shape)
+    model=model.to(device)
+    print("-----------------------------")
+    print("Initialisation of the optimizer...")   
+    optimizer= write_the_optimizer(model, optim)
+    print("-----------------------------")
+    print("-----------------------------")
+    print("Training...")  
+    # Loop over epochs
+    for epoch in range(max_epochs):
+      model.train()
+      optimizer=optimizer #get the optimizer for the current model
+      for local_batch, local_labels in training_generator:
+          optimizer.zero_grad()
+          local_batch, local_labels = local_batch.to(device), local_labels.to(device)
+          loss = train(local_batch, local_labels, model, loss_function) #get the loss for the current model
+          loss.backward() #backpropagation
+          optimizer.step() #update the weights
+      # Compute and store the errors
+      train_err = error(training_set.data, training_set.labels, model, original_shape)
+      list_train_err.append(train_err)
+      if epoch%10==0:
+        print("epoch: ", epoch)
+        print("train error model: ", train_err)
+      if validation==True:
+          val_err = error(validation_set.data, validation_set.labels, model, original_shape)
+          list_val_err.append(val_err)
+          if epoch%10==0:
+            print("test error model: ", test_err)
+      if test==True:
+          test_err = error(test_set.data, test_set.labels, model, original_shape)
+          list_test_err.append(test_err)
+          if epoch%10==0:
+            print("test error model: ", test_err)
+      #print(" Epoch {} complete".format(epoch))
+    ##################################################################################
+    ##################################################################################
+      
+    #put all the errors in a list
+    errors = [list_train_err]
+    if validation == True :
+      errors.append(list_val_err)
+    if test == True :
+      errors.append(list_test_err)
+    errors_positions = [error_positions(training_set.data, training_set.labels, model, original_shape)]
+    if validation == True : errors_positions.append(error_positions(validation_set.data, validation_set.labels, model, original_shape))
+    if test == True : errors_positions.append(error_positions(test_set.data, test_set.labels, model, original_shape)) 
+    return model, errors, errors_positions
+  else:
+     print("For now only the linear model is implemented")
+     return
+  
+def execute(MSA_file, weights_file, model_params, path, output_name='/', activation="square") :
+  
   """
-  This function is used to build and train the model
-  input:
-        data                ->    input data, shape (N, L*K) with N the numbers of sequences, L the length of the sequences, K the number of possible a.a
-        labels              ->    labels, shape (N, L*K) with N the numbers of sequences, L the length of the sequences, K the number of possible a.a
-        original_shape      ->    original shape of the MSA (N,L,K)
-        data_per_col        ->    (K,L) for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
-        model_type          ->    type of model, can be "linear", "non-linear" or "mix". !!!!! In this version, use only "linear" !!!!!
-        n_models            ->    number of models to be trained, if n_models > 1, the average model will also be trained
-        optimizer           ->    dictionary containing the parameters of the optimizer
-        activation          ->    if model_type is "non-linear" or "mix", activation will be the activation function of the hidden layer, can be "square". 
-                                  or "tanh", if model_type is "linear" this parameter will be ignored. !!!!!! WILL not be considered in this version :) !!!!!
-        batch_size          ->    size of the batch
-        max_epochs          ->    number of epochs
-        nb_hidden_neurons   ->    number of neurons in the hidden layer !!!!!! WILL not be considered in this version :) !!!!!
-        validation          ->    if True, the validation error will be computed
-        test                ->    if True, the test error will be computed
-        separation          ->    list of 2 floats, the first one is the fraction of the data that will be used for training,
-                                  the second one is the fraction of the data that will be used for validation
-"""
-  #########################################################################
-  ################# PRINT PART ABOUT THE DEVICE AND MODEL #################
-  #########################################################################
+  MSA_file: name of the file containing the preprocessed MSA
+  weights_file: name of the file containing the weights of the sequences
+  model_params: name of the file containing the parameters of the model
+  activation: if model_type is "non-linear" or "mix", activation will be the activation function of the hidden layer, can be "square"
+      or "tanh", if model_type is "linear" this parameter will be ignored
+  path: path to the folder where the model will be saved
+  output_name: name of the file where the model will be saved
+
+  """
+
   print("----------------------------") 
   # CUDA for PyTorch
   use_cuda = torch.cuda.is_available()
@@ -367,319 +495,7 @@ def build_and_train_model(data, labels, original_shape, data_per_col, model_type
       print("No GPU available, using the CPU instead.")
   torch.backends.cudnn.benchmark = True
   print("----------------------------")
-  print("Training duration : ", max_epochs, "epochs")
-  print("Model type : ", model_type)
-  if model_type == "non-linear" or model_type == "mix" : print("Activation function : ", activation)
-  ##########################################################################
-  ##########################################################################
-  
-  ############################################################################################
-  ########### !!!!!!!! FOR SEVERAL MODELS !!!!!!!!! ##########################################
-  ############################################################################################
-  if n_models>1:
-    ##########################################################################
-    ################# DATASETS FOR EVERY MODELS ##############################
-    ##########################################################################
-    ALLmodel=[]
-    ALLtraining_set=[]
-    ALLvalidation_set=[]
-    ALLtest_set=[]
-    average_model=None
-    for i in range(n_models): 
-      print("-------- model "+str(i)+"--------")
-      training_set, validation_set, test_set = create_datasets(data, labels, separation)
-      ALLtraining_set.append(training_set)
-      ALLvalidation_set.append(validation_set)
-      ALLtest_set.append(test_set)
-    separation_big_model=(0.1,0.1) #almost only test data
-    print("-------- model average --------")
-    training_set, validation_set, test_set = create_datasets(data, labels, separation_big_model)  
-    ALLtraining_set.append(training_set)
-    ALLvalidation_set.append(validation_set)
-    ALLtest_set.append(test_set) 
-    (_,L,K) = original_shape
-    ALLtraining_generator=[]
-    for training_set in ALLtraining_set:
-      params = {'batch_size': batch_size, #modif
-              'shuffle': True,
-              'num_workers':2} #change 28.02.24 for the cluster
-      #        'num_workers': 2}
-      #create data loader for the training_set
-      training_generator = torch.utils.data.DataLoader(training_set, **params)
-      ALLtraining_generator.append(training_generator)
-    ##########################################################################
-    ##########################################################################
-    
-    
-    #define the model according to model_type (linear, non-linear or mix) and, if not linear, activation (square or tanh)
-    if model_type == "linear" :
-      ##########################################################################
-      ################# CREATE THE LIST OF MASKED LINKS ########################
-      ##########################################################################
-      #list of tuples (input, output) that we want to be disconnected in the model
-      indices_mask = []
-      print("writing the indices_mask")
-      for j in range(0, L*K, K) :
-        for a in range(j, j+K) :
-          indices_mask += [(a, b) for b in range(j, j+K)]
-      for col_i in range(L):
-        for amino in range(K):
-          if data_per_col[amino,col_i]==1:
-            #add (col_i*K+amino,b) with b is all the others possibilities in the others columns
-            current_bloc=col_i*K
-            index_amino=col_i*K+amino
-            #remove the connection between index_amino and all the amino in the blocks before and the reciprocal also
-            indices_mask += [(index_amino, b) for b in range(current_bloc)]
-            indices_mask += [(b, index_amino) for b in range(current_bloc)]
-            #remove the connection between index_amino and all the amino in the blocks after and the reciprocal also
-            indices_mask += [(index_amino, b) for b in range(current_bloc+K,L*K)]
-            indices_mask += [(b, index_amino) for b in range(current_bloc+K,L*K)]   
-      print("original_shape",original_shape)
-      print("-----------------------------")
-      ##########################################################################
-      ##########################################################################
 
-      ##########################################################################
-      ################# CREATE THE LIST OF MODELS AND OPTIMIZERS ###############
-      ##########################################################################
-    
-      print("Initialisation of the models...")   
-      for training_set in ALLtraining_set:
-          model = LinearNetwork(indices_mask, training_set.labels.shape[1], original_shape)
-          model=model.to(device)
-          ALLmodel.append(model)    
-      print("-----------------------------")
-      print("Initialisation of the optimizer...")   
-      optimizer_list = [ write_the_optimizer(model, optimizer) for model in ALLmodel]   
-      print("-----------------------------")
-      print("Initialisation of the average model...")   
-      # Initialize the average model with the same architecture as the individual models
-      average_model = LinearNetwork(indices_mask, training_set.labels.shape[1], original_shape)
-      average_model = average_model.to(device)
-      # Initialize the parameters for averaging
-      # Initialize the parameters for averaging
-      average_parameters = {key: value.to(device) for key, value in average_model.state_dict().items()}
-      ##########################################################################
-      ##########################################################################
-
-      ##########################################################################
-      ################# CREATE THE ERRORS LISTS ################################
-      ##########################################################################
-      # Initialize lists to store errors and errors_positions for each model
-      avg_train_errors = []
-      if validation==True:
-          avg_validation_errors = []
-      if test==True:
-          avg_test_errors = []
-      ##########################################################################
-      ##########################################################################
-            
-      ################################################################################
-      ######################## TRAINING ##############################################
-      ################################################################################
-      print("-----------------------------")
-      print("Training...")  
-      # Loop over epochs
-      for epoch in range(max_epochs):
-        # Display the current epoch
-        print("epoch =", epoch)
-        for i, model in enumerate(ALLmodel): # Loop over models
-          model.train()
-          optimizer=optimizer_list[i] #get the optimizer for the current model
-          training_generator = ALLtraining_generator[i]
-          training_set = ALLtraining_set[i]
-          for local_batch, local_labels in training_generator:
-              optimizer.zero_grad()
-              local_batch, local_labels = local_batch.to(device), local_labels.to(device)
-              loss = train(local_batch, local_labels, model, loss_function) #get the loss for the current model
-              loss.backward() #backpropagation
-              optimizer.step() #update the weights
-      
-        #############################################################################
-        ################# COMPUTE THE AVERAGE MODEL #################################
-        #############################################################################
-      # Compute the average model based on the accumulated gradients
-        # Initialize the parameters for averaging
-        average_parameters = {key: torch.zeros_like(value).to(device) for key, value in average_model.state_dict().items()}
-        # Loop over models and accumulate the model parameters
-        for model in ALLmodel:
-            model_parameters = model.state_dict()
-            for key in model_parameters:
-                average_parameters[key] += model_parameters[key]
-        # Compute the average parameters for the average model
-        for key in average_parameters:
-            average_parameters[key] /= n_models
-        # Load the average parameters into the average model
-        average_model.load_state_dict(average_parameters)
-        ##########################################################################
-        ##########################################################################
-        
-        ##########################################################################
-        ################# COMPUTE AND STORE THE ERRORS ###########################
-        ##########################################################################
-        # Compute and store the errors
-        training_set=ALLtraining_set[n_models]
-        validation_set=ALLvalidation_set[n_models]
-        test_set=ALLtest_set[n_models]
-        train_err = error(training_set.data, training_set.labels, average_model, original_shape)
-        avg_train_errors.append(train_err)
-        print("train error average model: ", train_err)
-        if validation==True:
-            val_err = error(validation_set.data, validation_set.labels, average_model, original_shape)
-            avg_validation_errors.append(val_err)
-        if test==True:
-            test_err = error(test_set.data, test_set.labels, average_model, original_shape)
-            avg_test_errors.append(test_err)
-            print("test error average model: ", test_err)
-        ##########################################################################
-        ##########################################################################
-        print(" Epoch {} complete".format(epoch))
-      ##################################################################################
-      ##################################################################################
-        
-      #put all the errors in a list
-      errors = [avg_train_errors]
-      if validation == True :
-        errors.append(avg_validation_errors)
-      if test == True :
-        errors.append(avg_test_errors)
-      #compute the final error per position
-      training_set=ALLtraining_set[n_models]
-      validation_set=ALLvalidation_set[n_models]
-      test_set=ALLtest_set[n_models]
-      errors_positions = [error_positions(training_set.data, training_set.labels, average_model, original_shape)]
-      if validation == True : errors_positions.append(error_positions(validation_set.data, validation_set.labels, average_model, original_shape))
-      if test == True : errors_positions.append(error_positions(test_set.data, test_set.labels, average_model, original_shape)) 
-  ############################################################################################
-  ############################################################################################
-  
-  ############################################################################################
-  ################ !!!!!!!! FOR ONE MODEL !!!!!!!!! ##########################################
-  ############################################################################################
-  else:
-    #create the datasets
-    print("Only one model")
-    ###############################################################################
-    ################# CREATE THE DATASETS #########################################
-    ###############################################################################
-    training_set, validation_set, test_set = create_datasets(data, labels, separation)
-    (_,L,K) = original_shape
-    params = {'batch_size': batch_size, #modif
-              'shuffle': True,
-              'num_workers':2} #change 28.02.24 for the cluster
-      #        'num_workers': 2}
-    #create data loader for the training_set
-    training_generator = torch.utils.data.DataLoader(training_set, **params)
-    ##############################################################################
-    ##############################################################################
-
-    #define the model according to model_type (linear, non-linear or mix) and, if not linear, activation (square or tanh)
-    if model_type == "linear" :
-      #############################################################################
-      ################# CREATE THE LIST OF MASKED LINKS ###########################
-      #############################################################################
-      #list of tuples (input, output) that we want to be disconnected in the model
-      indices_mask = []
-      print("writing the indices_mask")
-      for j in range(0, L*K, K) :
-        for a in range(j, j+K) :
-          indices_mask += [(a, b) for b in range(j, j+K)]
-      for col_i in range(L):
-        for amino in range(K):
-          if data_per_col[amino,col_i]==1:
-            #add (col_i*K+amino,b) with b is all the others possibilities in the others columns
-            current_bloc=col_i*K
-            index_amino=col_i*K+amino
-            #remove the connection between index_amino and all the amino in the blocks before and the reciprocal also
-            indices_mask += [(index_amino, b) for b in range(current_bloc)]
-            indices_mask += [(b, index_amino) for b in range(current_bloc)]
-            #remove the connection between index_amino and all the amino in the blocks after and the reciprocal also
-            indices_mask += [(index_amino, b) for b in range(current_bloc+K,L*K)]
-            indices_mask += [(b, index_amino) for b in range(current_bloc+K,L*K)]
-      ##############################################################################
-      ##############################################################################
-            
-      ##############################################################################
-      ################# CREATE THE MODEL AND OPTIMIZER #############################
-      ##############################################################################
-      average_model = LinearNetwork(indices_mask, training_set.labels.shape[1], original_shape)
-      average_model=average_model.to(device)
-      optimizer = write_the_optimizer(average_model, optimizer)
-      ##############################################################################
-      ##############################################################################
-    
-      ##############################################################################
-      ################# CREATE THE ERRORS LISTS ####################################
-      ##############################################################################
-      # Initialize lists to store errors and errors_positions for each model
-      avg_train_errors = []
-      if validation==True:
-          avg_validation_errors = []
-      if test==True:
-          avg_test_errors = []
-      ###############################################################################
-      ###############################################################################
-      
-      ################################################################################
-      ######################## TRAINING ##############################################
-      ################################################################################
-      print("-----------------------------")
-      print("Training...")
-      # Loop over epochs
-      for epoch in range(max_epochs):
-        # Display the current epoch
-        if (epoch+1)%10==0:
-          print("epoch =", epoch+1)
-        average_model.train()
-        for local_batch, local_labels in training_generator:
-            optimizer.zero_grad()
-            local_batch, local_labels = local_batch.to(device), local_labels.to(device)
-            loss = train(local_batch, local_labels, average_model, loss_function)
-            loss.backward()
-            optimizer.step() 
-        ##################################################################################
-        ##################### COMPUTE THE ERRORS #########################################
-        ##################################################################################
-        # Compute and store the errors
-        train_err = error(training_set.data, training_set.labels, average_model, original_shape)
-        avg_train_errors.append(train_err)
-        print("train error average model: ", train_err)
-        if validation==True:
-            val_err = error(validation_set.data, validation_set.labels, average_model, original_shape)
-            avg_validation_errors.append(val_err)
-        if test==True:
-            test_err = error(test_set.data, test_set.labels, average_model, original_shape)
-            avg_test_errors.append(test_err)
-            print("test error average model: ", test_err)
-        ##################################################################################
-        ##################################################################################
-        
-        ALLmodel=average_model
-      #put all the errors in a list
-      errors = [avg_train_errors]
-      if validation == True :
-        errors.append(avg_validation_errors)
-      if test == True :
-        errors.append(avg_test_errors)
-      errors_positions = [error_positions(training_set.data, training_set.labels, average_model, original_shape)]
-      if validation == True : errors_positions.append(error_positions(validation_set.data, validation_set.labels, average_model, original_shape))
-      if test == True : errors_positions.append(error_positions(test_set.data, test_set.labels, average_model, original_shape))
-  ############################################################################################
-  ############################################################################################
-  return ALLmodel, average_model, errors, errors_positions
-
-def execute(MSA_file, weights_file, model_params, activation, path, output_name) :
-  
-  """
-  MSA_file: name of the file containing the preprocessed MSA
-  weights_file: name of the file containing the weights of the sequences
-  model_params: name of the file containing the parameters of the model
-  activation: if model_type is "non-linear" or "mix", activation will be the activation function of the hidden layer, can be "square"
-      or "tanh", if model_type is "linear" this parameter will be ignored
-  path: path to the folder where the model will be saved
-  output_name: name of the file where the model will be saved
-
-  """
 
   #check if the path to the folder exist if not create it
   if not os.path.exists(path):
@@ -789,7 +605,7 @@ def execute(MSA_file, weights_file, model_params, activation, path, output_name)
   ################# LOAD OF THE DATA AND LABELS #####################################
   ################################################################################### 
   print("-------- load of the data and label --------")
-  data, labels, original_shape, data_per_col = get_data_labels(MSA_file, weights_file)
+  data, labels, original_shape, data_per_col = get_data_labels(MSA_file, weights_file, device)
   np.savetxt(path+"/data_per_col.txt", data_per_col, fmt="%d")
   print("MSA shape : ", original_shape)
   ##################################################################################
@@ -798,52 +614,230 @@ def execute(MSA_file, weights_file, model_params, activation, path, output_name)
   ##################################################################################
   ################# BUILD AND TRAIN THE MODEL ######################################
   ##################################################################################
-  ALLmodel, model, errors, errors_positions = build_and_train_model(data, labels, original_shape, data_per_col, model_type,n_models,optimizer, activation=None, batch_size=batch_size, max_epochs=max_epochs,  nb_hidden_neurons=nb_hidden_neurons, validation=validation, test=test, separation=separation) 
+  
+  (_,L,K) = original_shape
+  generate_indices_mask(L, K, data_per_col,path)
+
+  ########################################################
+  ######## initatialisation average model ################
+  ########################################################
+  # Initialize the average model with the same architecture as the individual models
+  average_model=None
+  #The model will be initialized with the right architecture
+  #and we will be able to compute the average model
+  print("initatialisation average model...") #DONT FORGET TO PUT BACK AFTER
+  average_model = LinearNetwork(path+"/indice_mask.txt", L*K, original_shape)
+  average_model = average_model.to(device)
+  average_parameters = {key: torch.zeros_like(value).to(device) for key, value in average_model.state_dict().items()}
+  #########################################################
+  #########################################################
+
+  #########################################################
+  ############### initialisation errors ###################
+  #########################################################
+  avg_train_errors = []
+  avg_train_errors_positions = []
+  if validation==True:
+      avg_validation_errors = []
+      avg_validation_errors_positions = []
+  if test==True:
+      avg_test_errors = []
+      avg_test_errors_positions = []
+
+  #########################################################
+  #########################################################
+
+  #########################################################
+  ################ compute the model(s) ################### 
+  #########################################################
+  ALLmodel=[]
+  ALLerrors=[]
+  ALLerrors_positions=[]
+  for i in tqdm(range(n_models)):
+    '''
+    (1) write the name of the model and the errors to save them later
+    '''
+    if output_name=="/": #the user doesn't want a specific name
+      #take only <path>/model_<i>
+      model_name = path+"/model_" + str(i)
+      errors_name = path +"/errors_" + str(i) + ".txt"
+      errors_positions_name = path+ "/errors_positions_" + str(i) + ".txt"
+    else: #the user wants a specific name: <path>/model_<output_name><i>
+      model_name = path+"/model_" + output_name + "_"+str(i)
+      errors_name = path +"/errors_" + output_name + "_"+str(i) + ".txt"
+      errors_positions_name = path+ "/errors_positions_" + output_name + "_"+ str(i) + ".txt"
+    ALLmodel.append(model_name) #save the name of the model(s) in a list
+    ALLerrors.append(errors_name) #save the name of the errors(s) in a list
+    ALLerrors_positions.append(errors_positions_name) #save the name of the errors_positions(s) in a list
+    ''' 
+    (2) build and train the model if it doesn't already exist
+    '''
+    #look before to compute and save the model if it already exist
+    if os.path.exists(model_name):       
+      print("model ", model_name, "already exist, we will not overwrite it")
+    else:
+      print("-------- model "+str(i)+"--------")
+      model, errors, errors_positions = build_and_train_model(data,labels, original_shape, separation, model_type, max_epochs, batch_size, validation, test, optimizer, device, use_cuda, path)
+      torch.save(model, model_name)
+      np.savetxt(errors_name, errors)
+      np.savetxt(errors_positions_name, errors_positions)
+      print("model saved:", model_name)
+      print("errors saved:", errors_name)
+      print("errors_positions saved:", errors_positions_name)  
+      del model #don't keep the model in memory
+  #########################################################
+  #########################################################
+  
+  #########################################################
+  ################ compute the average model ##############
+  #########################################################
+  print("-------- model average --------")
+  # Loop over models and accumulate the model parameters saved
+  if n_models>1:
+  ######################################################### don't forget to put them again after
+    for model_n in ALLmodel:
+        model=torch.load(model_n)
+        model_parameters = model.state_dict()
+        for key in model_parameters:
+            average_parameters[key] += model_parameters[key]
+    # Compute the average parameters for the average model
+    for key in average_parameters:
+        average_parameters[key] /= n_models
+    # Load the average parameters into the average model
+  # average_model.load_state_dict(average_parameters)
+  #########################################################
+    # Compute the average of the train, val,and test errors at each epochs
+    #avg_error(epoch_i)=somme(epoch_i)/n_models
+    #print("the dtype of errors is ",np.loadtxt(ALLerrors[0]).dtype)
+    #print("the shape of errors is ",np.loadtxt(ALLerrors[0]).shape)
+    #print("the shape of ALLerrors is ",np.array(ALLerrors).shape)
+
+    for i in range(max_epochs):
+        avg_train=0
+        avg_test=0
+        avg_val=0
+        comptage=0
+        if validation==False and test==False: #errors[i] is composed of only one list
+            for errors in ALLerrors:
+                avg_train+=np.loadtxt(errors)[i]
+            avg_train_errors.append(avg_train/n_models)
+        elif validation==True and test==False: #errors[i] is composed of two lists
+            for errors in ALLerrors:
+                avg_train+=np.loadtxt(errors)[0][i]
+                avg_val+=np.loadtxt(errors)[1][i]
+            avg_train_errors.append(avg_train/n_models)
+            avg_validation_errors.append(avg_val/n_models)
+        elif validation==False and test==True:
+            for errors in ALLerrors:
+                avg_train+=np.loadtxt(errors)[0][i]
+                avg_test+=np.loadtxt(errors)[1][i]
+            avg_train_errors.append(avg_train/n_models)
+            avg_test_errors.append(avg_test/n_models)           
+            
+        else: #validation and test are true
+            for errors in ALLerrors:
+                avg_train+=np.loadtxt(errors)[0][i]
+                avg_val+=np.loadtxt(errors)[1][i]
+                avg_test+=np.loadtxt(errors)[2][i]
+            avg_train_errors.append(avg_train/n_models)
+            avg_validation_errors.append(avg_val/n_models)
+            avg_test_errors.append(avg_test/n_models)
+    print("-------- plot the curve --------")
+    #plot learning curve
+    plt.plot(range(len(avg_train_errors)), avg_train_errors, label="train error")
+    plt.plot(range(len(avg_test_errors)), avg_test_errors, label="test error")
+    plt.ylabel("categorical error")
+    plt.xlabel("epoch")
+    plt.legend()
+    plt.grid()
+    #save the plot in the folder
+    plt.savefig(path+"/learning_curve.png")
+    print("-------- end --------")
+  else:
+    print("only one model, the average model is the model")
+    average_model=torch.load(ALLmodel[0])
+    avg_train=0
+    avg_test=0
+    avg_val=0
+    if validation==False and test==False:
+        for errors in ALLerrors:
+            avg_train+=np.loadtxt(errors)[0]
+        avg_train_errors.append(avg_train)
+    elif validation==True and test==False:
+        for errors in ALLerrors:
+            avg_train+=np.loadtxt(errors)[0][0]
+            avg_val+=np.loadtxt(errors)[0][1]
+        avg_train_errors.append(avg_train)
+        avg_validation_errors.append(avg_val)
+    elif validation==False and test==True:
+        for errors in ALLerrors:
+            avg_train+=np.loadtxt(errors)[0][0]
+            avg_test+=np.loadtxt(errors)[0][1]
+        avg_train_errors.append(avg_train)
+        avg_test_errors.append(avg_test)
+    else: #validation and test are true
+        for errors in ALLerrors:
+            avg_train+=np.loadtxt(errors)[0][0]
+            avg_val+=np.loadtxt(errors)[0][1]
+            avg_test+=np.loadtxt(errors)[0][2]
+        avg_train_errors.append(avg_train)
+        avg_validation_errors.append(avg_val)
+        avg_test_errors.append(avg_test)
+  
+  
+  #put the errors in a list
+  #avg_train_errors_list = [list(errors) for errors in avg_train_errors]
+  #print it
+  print("avg_train_errors_list: ",avg_train_errors)
+  #avg_train_errors_positions_list = [list(errors) for errors in avg_train_errors_positions]
+  avg_errors = [avg_train_errors]
+  #avg_errors_positions = [avg_train_errors_positions_list]
+  if validation == True :
+    avg_validation_errors_list = [list(errors) for errors in avg_validation_errors]
+    #avg_validation_errors_positions_list = [list(errors) for errors in avg_validation_errors_positions]
+    avg_errors.append(avg_validation_errors_list)
+    #avg_errors_positions.append(avg_validation_errors_positions_list)
+  if test == True :
+    #avg_test_errors_list = [list(errors) for errors in avg_test_errors]
+    #avg_test_errors_positions_list = [list(errors) for errors in avg_test_errors_positions]
+    avg_errors.append(avg_test_errors)
+    #avg_errors_positions.append(avg_test_errors_positions_list)
+  
+  
+  #save the average model
+  if output_name=="/":
+    model_name = path+"/model_" + "average_0-" + str(n_models-1) 
+    avg_errors_name = path +"/errors_0-" + str(n_models-1) + ".txt"
+    #avg_errors_positions_name = path+ "/errors_positions_0-" + str(n_models-1) + ".txt"
+  else:
+    model_name = path+ "/model_" + output_name + "average_0-" + str(n_models-1)
+    avg_errors_name = path +"/errors_" + output_name + "_0-" + str(n_models-1) + ".txt"
+    #avg_errors_positions_name = path+ "/errors_positions_" + output_name + "_0-" + str(n_models-1) + ".txt"
+  if os.path.exists(model_name):       
+    print("model ", model_name, "already exist, we will not overwrite it")
+  else:
+    torch.save(average_model, model_name)
+    np.savetxt(errors_name, avg_errors)
+    #np.savetxt(errors_positions_name, avg_errors_positions)
+    print("average model saved:", model_name)
+    print("average errors saved:", avg_errors_name)
+    #print("average errors_positions saved:", avg_errors_positions_name)
+
+  ##########################################################################
+  ##########################################################################
+##################################################################################
+##################################################################################
+        
   print("-------- plot the curve --------")
   #plot learning curve
-  plt.plot(range(len(errors[0])), errors[0], label="train error")
-  plt.plot(range(len(errors[1])), errors[1], label="test error")
+  plt.plot(range(len(avg_train_errors)), avg_train_errors, label="train error")
+  plt.plot(range(len(avg_test_errors)), avg_test_errors, label="test error")
   plt.ylabel("categorical error")
   plt.xlabel("epoch")
   plt.legend()
   plt.grid()
-  plt.show()
-  ##################################################################################
-  ##################################################################################
-
-  ##################################################################################
-  ################# SAVE THE MODEL & ERRORS ########################################
-  ##################################################################################
-  #the models from the list ALLmodel:
-  if n_models>1:
-    for i in range(len(ALLmodel)-1): #write the name with the number of the model
-      if output_name=="/":
-        model_name = path+ "/model_" + str(i)
-      else:
-        model_name = path+"/model_" + output_name + str(i)
-      print(model_name)
-      torch.save(ALLmodel[i], model_name)
-    #average model:
-    if output_name=="/":
-      model_name = path+"/model_" + "average_0-" + str(n_models-1) 
-      errors_name = path +"/errors_0-" + str(n_models-1) + ".txt"
-      errors_positions_name = path+ "/errors_positions_0-" + str(n_models-1) + ".txt"
-    else:
-      model_name = path+ "/model_" + output_name + "average_0-" + str(n_models-1)
-      errors_name = path +"/errors_" + output_name + "_0-" + str(n_models-1) + ".txt"
-      errors_positions_name = path+ "/errors_positions_" + output_name + "_0-" + str(n_models-1) + ".txt"
-  else:
-    if output_name=="/":
-      model_name = path+"/model" 
-      errors_name = path +"/errors" + ".txt"
-      errors_positions_name = path+ "/errors_positions"  + ".txt"
-    else:
-      model_name = path+ "/model_" + output_name
-      errors_name = path +"/errors_" + output_name + ".txt"
-      errors_positions_name = path+ "/errors_positions_" + output_name + ".txt"
-  print(model_name)
-  torch.save(model, model_name)
-  np.savetxt(errors_name, errors)
-  np.savetxt(errors_positions_name, errors_positions)
+  #save the plot in the folder
+  plt.savefig(path+"/learning_curve.png")
+  print("-------- end --------")
   ##################################################################################
   ##################################################################################
