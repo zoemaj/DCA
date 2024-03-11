@@ -150,7 +150,8 @@ def average_product_correction(f) :
             if j!= i : f[i,j] = f[i,j]-f_i_s[i]*f_j_s[j]/f_    
     return f
 
-def couplings(model_name, model_type, L, K, data_per_col, number_model, type_average, output_name) :
+def couplings(model_name, L, K, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear") :
+    
     #now we have one model or a list of models with <model_name>_<number> such that <number> is 1,2,...number_model
     #we need to extract the model(s) and apply the couplings function on it/each of them
     #then we need to average the couplings
@@ -166,6 +167,7 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
                 type_average        ->         type of average to apply on the couplings
                 output_name         ->         name of the output file
     '''
+
     ###################################################################################
     ################# EXTRACTION OF THE MODEL(S) ######################################
     ############ & data_per_col (the same for every model(s)) #########################
@@ -181,50 +183,85 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     L = int(L)
     K = int(K)
     #load the data_per_col .txt file and convert it into a numpy array
+    if data_per_col=="/":
+        #take the path of the model_name and add the name 'data_per_col.txt' to it
+        data_per_col = os.path.dirname(model_name)
+        data_per_col = os.path.join(data_per_col, 'data_per_col.txt')
+        print("take the default data_per_col file: ", data_per_col)
     data_per_col=np.loadtxt(data_per_col)
     ###################################################################################
     ###################################################################################
-
+    if output_name=="/":
+        #take the path of the model_name and add the name 'couplings' to it
+        output_name = os.path.dirname(model_name)
+        output_name = os.path.join(output_name, 'couplings')
     ###################################################################################
     ################# WEIGHT EXTRACTION AND ISING GAUGE FOR THE MODEL(S) ##############
     ################### (depend if we consider the taxonomy or not)####################
     ###################################################################################
     print("------------ weight extraction and Ising gauge for the model(s) ------------")
-    #average_couplings=np.zeros((L*K,L*K))
-    if K>21:
-        print("K=",K," we have the class type for each sequence")
-        average_couplings=np.zeros(((L-1)*K,(L-1)*K)) #with class
-    else: #K=21
-        print("K=",K," we don't have the class type for each sequence")
-        average_couplings=np.zeros((L*K,L*K))
-    ALL_couplings=[]
-    for model in models:
-        couplings = extract_couplings(model, model_type, (L,K)) #we got an array of dim (L*K,L*K)
+
+    #createthe name
+    name_couplings_before = os.path.dirname(output_name) # Path for the couplings directory without the last 
+    #add the name 'couplings_before_ising' to the couplings_path
+    name_couplings_before = os.path.join(name_couplings_before, 'couplings_before_ising/')
+    #check if it exist
+    if os.path.isfile(os.path.join(name_couplings_before, "couplings_before_ising.txt")):
+        print("couplings_before_ising.txt already exists, we don't compute it again")
+        average_couplings=np.loadtxt(os.path.join(name_couplings_before, "couplings_before_ising.txt"))
+        #print("shape of couplings before ising:", average_couplings.shape) #oke
         if K>21:
-            #with class we need to remove the last blocs of size K
-            print("treatment of couplings: remove the last column corresponding to the class type")
-            couplings=couplings[:-K,:-K]
-        ALL_couplings.append(couplings)
-        average_couplings += couplings
-    if K>21:
-        L=L-1 #lose a dimension with class
-        data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
-    print('L,K:(',L,',',K,')')
-    average_couplings=average_couplings/number_model
+            L=L-1 #lose a dimension with class
+            data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
+        print('L,K:(',L,',',K,')')
+    else:
+        #average_couplings=np.zeros((L*K,L*K))
+        if K>21:
+            print("K=",K," we have the class type for each sequence")
+            average_couplings=np.zeros(((L-1)*K,(L-1)*K)) #with class
+        else: #K=21
+            print("K=",K," we don't have the class type for each sequence")
+            average_couplings=np.zeros((L*K,L*K))
+        ALL_couplings=[]
+        for model in models:
+            couplings = extract_couplings(model, model_type, (L,K)) #we got an array of dim (L*K,L*K)
+            if K>21:
+                #with class we need to remove the last blocs of size K
+                print("treatment of couplings: remove the last column corresponding to the class type")
+                couplings=couplings[:-K,:-K]
+            ALL_couplings.append(couplings)
+            average_couplings += couplings
+        if K>21:
+            L=L-1 #lose a dimension with class
+            data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
+        print('L,K:(',L,',',K,')')
+        average_couplings=average_couplings/number_model
+        #
+        # Create the directory and its parent directories if they don't exist
+        os.makedirs(name_couplings_before, exist_ok=True)
+        np.savetxt(os.path.join(name_couplings_before, "couplings_before_ising.txt"), average_couplings)
+        print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_before_ising.txt"))
+    
+
     ###################################################################################
     ###################################################################################
 
     ###################################################################################
     ################# PLOT OF THE COUPLINGS BEFORE ISING ##############################
     ###################################################################################
-    print("------------ plot before the ising gauge ------------")
-    plt.figure()
-    plt.plot(np.triu(average_couplings).flatten(), np.tril(average_couplings).T.flatten(), '.')
-    plt.plot(np.linspace(-2, 3), np.linspace(-2, 3), '--')
-    plt.xlabel("$C_{\lambda \kappa lk}$", fontsize=18)
-    plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
-    plt.grid()
-    plt.show()
+    if figure==True:
+        print("------------ plot before the ising gauge ------------")
+        plt.figure()
+        plt.plot(np.triu(average_couplings).flatten(), np.tril(average_couplings).T.flatten(), '.')
+        plt.plot(np.linspace(-2, 3), np.linspace(-2, 3), '--')
+        plt.xlabel("$C_{\lambda \kappa lk}$", fontsize=18)
+        plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
+        plt.grid()
+        #save it
+        plt.savefig(os.path.join(name_couplings_before, "couplings_before_ising.png"))
+    else:
+        print("No plot before the ising gauge, because figure=False")
+    
     ##################################################################################
     ##################################################################################
     
@@ -244,6 +281,7 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     AND for (1) and (2) we have an average_couplings (the average_couplings = the couplings for the only model in case (1))
 
     '''
+
     print("------------ computation of ising gauge ------------")
     if number_model>1:
         step=1
@@ -268,6 +306,7 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
                 else:
                     couplings = ising_gauge(couplings, model, model_type, (L,K), data_per_col)
                     np.savetxt(os.path.join(couplings_path, "couplings_ising_" + str(step-1) + ".txt"), couplings)
+                    print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_ising_" + str(step-1) + ".txt"))
                 ALL_couplings_ising.append(couplings)
                 average_couplings += couplings
                 print("couplings after ising gauge shape:", average_couplings.shape)
@@ -277,22 +316,43 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
             print("error with type_average")
     else: # we do ising on the average of the models (number_model=1)
         print("only on the couplings from the average model (because selected to do only on 1model)")
-        average_couplings=ising_gauge(average_couplings,models[0],model_type,(L,K), data_per_col)
+        couplings_path = os.path.dirname(output_name)
+        #add the name 'couplings_after_ising' to the couplings_path
+        couplings_path = os.path.join(couplings_path, 'couplings_after_ising/')
+        #check if it exist
+        if os.path.isfile(os.path.join(couplings_path, "couplings_after_ising.txt")):
+            print("couplings_after_ising.txt already exists, we don't compute it again")
+            average_couplings=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising.txt"))
+        else:
+            average_couplings_old=np.copy(average_couplings)
+            #print("shape data_per_col:", data_per_col.shape)
+            average_couplings=ising_gauge(average_couplings_old,models[0],model_type,(L,K), data_per_col)
+            # Create the directory and its parent directories if they don't exist
+            os.makedirs(couplings_path, exist_ok=True)
+            np.savetxt(os.path.join(couplings_path, "couplings_after_ising.txt"), average_couplings)
+            print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising.txt"))
+    
+            
+
     ##################################################################################
     ##################################################################################
     
     ###################################################################################
     ################# PLOT OF THE COUPLINGS AFTER ISING ###############################
     ###################################################################################
-    print("------------ plot after the ising gauge ------------")
-    #plot symmetry of coupling coeff after Ising gauge
-    plt.figure()
-    plt.plot(np.triu(average_couplings).flatten(), np.tril(average_couplings).T.flatten(), '.')
-    plt.plot(np.linspace(-2, 3), np.linspace(-2, 3), '--')
-    plt.xlabel("$C_{\lambda \kappa lk}$", fontsize=18)
-    plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
-    plt.grid()
-    plt.show()
+    if figure==True:
+        print("------------ plot after the ising gauge ------------")
+        #plot symmetry of coupling coeff after Ising gauge
+        plt.figure()
+        plt.plot(np.triu(average_couplings).flatten(), np.tril(average_couplings).T.flatten(), '.')
+        plt.plot(np.linspace(-2, 3), np.linspace(-2, 3), '--')
+        plt.xlabel("$C_{\lambda \kappa lk}$", fontsize=18)
+        plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
+        plt.grid()
+        #save it
+        plt.savefig(os.path.join(couplings_path, "couplings_after_ising.png"))
+    else:
+        print("No plot after the ising gauge, because figure=False")
     ##################################################################################
     ##################################################################################
     
@@ -307,60 +367,7 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
     (2) number_model>1 and type_average="average_couplings_frob":
         we apply the average product correction on each couplings before averaging them
     '''
-    n=0
-    print("---------------- Frobenius ----------------")
-    if number_model>1 and type_average=="average_couplings_frob":
-        for couplings in ALL_couplings_ising:
-            couplings+=0.5*(couplings + couplings.T)
-        #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
-            matrix = []
-            for i in range(L) :
-                rows = []
-                for j in range(L) :
-                    rows.append(couplings[i*K:(i+1)*K, j*K:(j+1)*K])
-                matrix.append(rows)
-            couplings = np.array(matrix)
-            #frobenius norm
-            couplings = np.linalg.norm(couplings, 'fro', (2, 3))
-            #average product correction
-            couplings = average_product_correction(couplings)
-            #reshape in form (0,1) (0,2) ... (1,2) (1,3) ...
-            couplings = np.triu(couplings)
-            tmp = []
-            for i in range(L) :
-                for j in range(i+1, L) :
-                    tmp.append(couplings[i,j])
-            couplings = np.array(tmp) 
-            if n==0:
-                average_couplings=np.copy(couplings)
-                n=1
-            average_couplings += couplings
-        average_couplings = average_couplings/number_model
-        print("couplings after frob shape:", average_couplings.shape)
-    else: #average couplings or for number_model=1
-        average_couplings+=0.5*(average_couplings + average_couplings.T)
-        #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
-        matrix = []
-        for i in range(L) :
-            rows = []
-            for j in range(L) :
-                rows.append(average_couplings[i*K:(i+1)*K, j*K:(j+1)*K])
-            matrix.append(rows)
-        average_couplings = np.array(matrix)
-        average_couplings = np.linalg.norm(average_couplings, 'fro', (2, 3))
-        average_couplings = average_product_correction(average_couplings)
-        average_couplings = np.triu(average_couplings)
-        tmp = []
-        for i in range(L) : 
-            for j in range(i+1, L) :
-                tmp.append(average_couplings[i,j]) #(0,1), (0,2),...(1,2),(1,3),....(L-1,L) -> L*(L-1)/2 elements in total
-        average_couplings = np.array(tmp)
-    ##################################################################################
-    ##################################################################################
-    
-    #################################################################################
-    ################# SAVING THE COUPLINGS ##########################################
-    #################################################################################
+    print("------------ average product correction ------------")
     output_directory = os.path.dirname(output_name) # Path for the couplings directory without the last part of the output_name (to stock in the folder)
     # saved the last part as the name of the file
     output_name = os.path.basename(output_name)
@@ -372,9 +379,70 @@ def couplings(model_name, model_type, L, K, data_per_col, number_model, type_ave
             output_directory = os.path.join(output_directory, 'average-models-and-frob/')
         elif type_average=="average_couplings":
             output_directory = os.path.join(output_directory, 'average-couplings/')
-    os.makedirs(output_directory, exist_ok=True) # Create the directory and its parent directories if they don't exist
-    #print the path of: os.path.join(output_directory, output_name)
-    print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
-    np.savetxt(os.path.join(output_directory, output_name), average_couplings)
-    #################################################################################
-    #################################################################################
+    #check if it exist
+    if os.path.isfile(os.path.join(output_directory, output_name)):
+        print("The final couplings file already exists, we don't compute it again")
+    else:
+        n=0
+        print("---------------- Frobenius ----------------")
+        if number_model>1 and type_average=="average_couplings_frob":
+            for couplings in ALL_couplings_ising:
+                couplings+=0.5*(couplings + couplings.T)
+            #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
+                matrix = []
+                for i in range(L) :
+                    rows = []
+                    for j in range(L) :
+                        rows.append(couplings[i*K:(i+1)*K, j*K:(j+1)*K])
+                    matrix.append(rows)
+                couplings = np.array(matrix)
+                #frobenius norm
+                couplings = np.linalg.norm(couplings, 'fro', (2, 3))
+                #average product correction
+                couplings = average_product_correction(couplings)
+                #reshape in form (0,1) (0,2) ... (1,2) (1,3) ...
+                couplings = np.triu(couplings)
+                tmp = []
+                for i in range(L) :
+                    for j in range(i+1, L) :
+                        tmp.append(couplings[i,j])
+                couplings = np.array(tmp) 
+                if n==0:
+                    average_couplings=np.copy(couplings)
+                    n=1
+                average_couplings += couplings
+            average_couplings = average_couplings/number_model
+            print("couplings after frob shape:", average_couplings.shape)
+        else: #average couplings or for number_model=1
+            average_couplings+=0.5*(average_couplings + average_couplings.T)
+            #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
+            matrix = []
+            for i in range(L) :
+                rows = []
+                for j in range(L) :
+                    rows.append(average_couplings[i*K:(i+1)*K, j*K:(j+1)*K])
+                matrix.append(rows)
+            average_couplings = np.array(matrix)
+            average_couplings = np.linalg.norm(average_couplings, 'fro', (2, 3))
+            average_couplings = average_product_correction(average_couplings)
+            average_couplings = np.triu(average_couplings)
+            tmp = []
+            for i in range(L) : 
+                for j in range(i+1, L) :
+                    tmp.append(average_couplings[i,j]) #(0,1), (0,2),...(1,2),(1,3),....(L-1,L) -> L*(L-1)/2 elements in total
+            average_couplings = np.array(tmp)
+        ##################################################################################
+        ##################################################################################
+        
+        #################################################################################
+        ################# SAVING THE COUPLINGS ##########################################
+        #################################################################################
+        
+        os.makedirs(output_directory, exist_ok=True) # Create the directory and its parent directories if they don't exist
+        #print the path of: os.path.join(output_directory, output_name)
+        
+        np.savetxt(os.path.join(output_directory, output_name), average_couplings)
+        print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
+        print("---------------- END ----------------")
+        #################################################################################
+        #################################################################################
