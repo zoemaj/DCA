@@ -19,16 +19,31 @@ def sort_sequences(fasta_file):
         # try to Extract organism from the second term after splitting by '_' (in the example it will take HUMAN)
         #because some time the '_' is in the header_parts[0]
         try:
-            organism = header_parts[1].split('_')[1]  # Extract organism from the second term after splitting by '_' (in the example it will take HUMAN)
+            organism_name = header_parts[1].split('_')[1]  # Extract organism from the second term after splitting by '_' (in the example it will take HUMAN)
             pass
         except:
-            organism = header_parts[0].split('_')[1]
+            organism_name = header_parts[0].split('_')[1]
             pass
 
-        organism = organism.upper()
+        organism_name = organism_name.upper()
         #keep only the sequence of the letters after the header parts
         sequence_prot= sequence.seq
-        organism_sequences[organism].append(sequence_prot) #add the sequence to the list of sequences for this organism
+        #extract the OX number:
+        # example of headers: >lcl|Query_317909 tr|A0A494C039|A0A494C039_HUMAN Hypoxia up-regulated protein 1 OS=Homo sapiens OX=9606 GN=HYOU1 PE=1 SV=1
+        OX=None
+        for el in header_parts:
+            try:
+                OX=el.split('OX=')[1]
+                pass
+            except:
+                pass
+        if OX==None:
+            R=input('No OX identification, it will not be possible to preprocess this file with taxonomy in the future. Do you still want to continue? (yes/no)')
+            while  R!='yes' and R!='no':
+                R=input('Please write yes or no:')
+            if R=='no':
+                return
+        organism_sequences[organism_name].append([OX,sequence_prot]) #add the sequence to the list of sequences for this organism
 
     print(f"Number of different organism: {len(organism_sequences.keys())}")
     return organism_sequences
@@ -57,8 +72,10 @@ def TwoInOne(fastafile_one,fastafile_two):
         with open(file_name, "r") as file: #"r" is for read
             print(f"The file {file_name} already exist")
             #ask in terminal if we want to overwrite the file
-            overwrite = input("Do you want to overwrite the file? (y/n) ")
-            if overwrite.lower() == "y":
+            overwrite = input("Do you want to overwrite the file? (yes/no) ")
+            while overwrite!="yes" and overwrite!="no":
+                overwrite = input("Please enter yes or no ")
+            if overwrite=="yes":
                 print(f"Overwriting the file {file_name}")
                 pass
             else:
@@ -72,8 +89,9 @@ def TwoInOne(fastafile_one,fastafile_two):
             #take the same number of sequences for the two proteins
             n=min(len(organism_one[key]),len(organism_two[key]))
             for i in range(n):
-                output_handle.write(f">{key}\n")
-                output_handle.write(str(organism_one[key][i]) + str(organism_two[key][i]) + "\n")
+                output_handle.write(f">sp {key} OX={organism_one[key][i][0]}\n") #should be the same for the two proteins
+                #take the seq of the protein, second argument of the list
+                output_handle.write(str(organism_one[key][i][1]) + str(organism_two[key][i][1])+ "\n")
     
     print(f"Number of sequences in the new fasta file: {len(list(SeqIO.parse(file_name, 'fasta')))}")
     #check that the two first sequences are not the same
