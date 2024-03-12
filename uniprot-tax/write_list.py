@@ -88,12 +88,10 @@ def extract_list(df):
     dictionary_columns_to_keep={}
     list_columns_found={}
     dictionary_columns_to_keep["Node"]=Node
-    for column in column_to_keep:
+    for column in column_to_keep: #initialize the dictionary
         dictionary_columns_to_keep[column]=[]
         list_columns_found[column]=False
-            
-    for i,line in enumerate(tax[1:]):
-        
+    for i,line in enumerate(tax[1:]):#for each line
         line=line.split(",")
         for el in line:
             #look if there is a "()"
@@ -108,8 +106,7 @@ def extract_list(df):
                 dictionary_columns_to_keep[key].append(" Other")
         #reset the list
         list_columns_found={key: False for key in list_columns_found.keys()}
-                
-        
+                   
     #
     #for each key of dictionary except Node
     for key, value in dictionary_columns_to_keep.items():
@@ -144,6 +141,9 @@ def extract_list(df):
                 name_output=input("Please enter the name of the file ")
                 df.to_csv(name_output,index=False)
                 print("The file ",name_output," has been created")
+    else:
+        df.to_csv(name_output,index=False)
+        print("The file ",name_output," has been created")
 
 
 def execute(path_file):
