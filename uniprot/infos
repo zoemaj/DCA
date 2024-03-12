@@ -1,9 +1,0 @@
-- list-uniprot.txt:
-    downloaded from uniprot, to have every possible organism name linked with their OX number (Node)
-- listE-uniprot.txt: 
-    dictionary-kindgom.py was used to extract the unique name. This list was then fullfilled with Kingdom and Division (or embranchment) -> E-uniprot.txt
-    Note that this last part was executed by ChatGPT and a more accurate way should be done in the future. 
-- dictionary-kingdom.csv:
-    dictionary-kindgom.py was used to create a dictionary with -> Node for "['Kingdom', 'N', 'C']". This dictionary was saved into a csv file.
-- eukaryota-species.txt
-    by using dictionary-kindgom.py and the E-uniprot.txt, a new file with  OX, kingdom, division only for eukaryota
