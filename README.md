@@ -255,8 +255,7 @@ Arguments needed by the main :
 Example of usage :
 
 ```shell
-$ python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr SGD,0.005,0.01,0,0,False 203
-0.8,0.8  
+$ python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr -optimizer SGD,0.005,0.01,0,0,False -separations 0.8,0.8  
 ```
 or by using the default values:
 
