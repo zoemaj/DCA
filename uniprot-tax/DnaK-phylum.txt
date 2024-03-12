@@ -1,0 +1,167 @@
+ Pseudomonadota : 105767
+ Actinomycetota : 39939
+ Bacillota : 39444
+ Bacteroidota : 19224
+ Other: 7565
+ Cyanobacteriota : 6569
+ Chloroflexota : 6028
+ Campylobacterota : 4477
+ Planctomycetota : 4368
+ Acidobacteriota : 4150
+ Thermodesulfobacteriota : 3425
+ Verrucomicrobiota : 2857
+ Spirochaetota : 2234
+ Myxococcota : 2223
+ Nitrospirota : 1794
+ Gemmatimonadota : 1517
+ Mycoplasmatota : 1475
+ Bdellovibrionota : 913
+ Candidatus Omnitrophota : 744
+ Ignavibacteriota : 730
+ Fusobacteriota : 685
+ Candidatus Rokubacteria : 608
+ Chlamydiota : 571
+ Candidatus Marinimicrobia : 550
+ Elusimicrobiota : 549
+ Armatimonadota : 538
+ Candidatus Saccharibacteria : 523
+ Deinococcota : 504
+ Nitrospinota : 395
+ Thermotogota : 392
+ Chlorobiota : 375
+ Lentisphaerota : 345
+ Aquificota : 320
+ Synergistota : 318
+ Candidatus Moranbacteria : 282
+ Candidatus Kaiserbacteria : 276
+ Candidatus Woesebacteria : 270
+ Candidatus Uhrbacteria : 261
+ Candidatus Aminicenantes : 253
+ Candidatus Peregrinibacteria : 240
+ Candidatus Poribacteria : 234
+ Candidatus Parcubacteria : 232
+ Zixibacteria : 228
+ Rhodothermota : 227
+ Calditrichota : 224
+ Candidatus Nomurabacteria : 223
+ Candidatus Magasanikbacteria : 218
+ Balneolota : 209
+ Candidatus Cloacimonadota : 204
+ Candidatus Latescibacteria : 176
+ Katanobacteria : 175
+ Candidatus Roizmanbacteria : 172
+ Fibrobacterota : 168
+ Candidatus Falkowbacteria : 166
+ Candidatus Melainabacteria : 163
+ Candidatus Hydrogenedentes : 146
+ Candidatus Levybacteria : 146
+ Candidatus Nealsonbacteria : 144
+ Candidatus Wolfebacteria : 141
+ Candidatus Gottesmanbacteria : 133
+ Bacteria division WOR-3 : 132
+ Candidatus Dadabacteria : 130
+ Atribacterota : 126
+ Candidatus Bipolaricaulota : 122
+ Candidatus Yanofskybacteria : 118
+ candidate division NC10 : 114
+ Thermomicrobiota : 110
+ Candidatus Giovannonibacteria : 107
+ Candidatus Eisenbacteria : 104
+ Candidatus Portnoybacteria : 102
+ Deferribacterota : 96
+ Candidatus Eremiobacterota : 91
+ Candidatus Daviesbacteria : 87
+ Candidatus Berkelbacteria : 86
+ Candidatus Zambryskibacteria : 86
+ Candidatus Shapirobacteria : 86
+ Candidatus Azambacteria : 85
+ Candidatus Gracilibacteria : 85
+ Candidatus Curtissbacteria : 81
+ Candidatus Doudnabacteria : 81
+ Candidatus Pacebacteria : 80
+ Candidatus Taylorbacteria : 80
+ Kiritimatiellota : 79
+ Candidatus Sumerlaeota : 76
+ Candidatus Tectomicrobia : 69
+ Candidatus Amesbacteria : 67
+ Candidatus Aerophobetes : 67
+ Candidatus Collierbacteria : 66
+ Candidatus Buchananbacteria : 63
+ Candidatus Sungbacteria : 61
+ Candidatus Liptonbacteria : 58
+ Candidatus Kuenenbacteria : 58
+ Candidatus Margulisiibacteriota : 58
+ Candidatus Dormibacteraeota : 54
+ Candidatus Jorgensenbacteria : 52
+ Candidatus Kerfeldbacteria : 50
+ Candidatus Vogelbacteria : 50
+ Candidatus Riflebacteria : 49
+ Candidatus Beckwithbacteria : 47
+ Candidatus Wildermuthbacteria : 47
+ Candidatus Yonathbacteria : 47
+ Candidatus Schekmanbacteria : 45
+ Candidatus Ryanbacteria : 44
+ Candidatus Staskawiczbacteria : 44
+ Candidatus Harrisonbacteria : 43
+ Caldisericota : 43
+ Candidatus Desantisbacteria : 42
+ Candidatus Woykebacteria : 41
+ Candidatus Microgenomates : 40
+ Candidatus Colwellbacteria : 40
+ Candidatus Adlerbacteria : 38
+ Chrysiogenota : 35
+ Candidatus Fermentibacteria : 34
+ Candidatus Komeilibacteria : 32
+ Candidatus Lloydbacteria : 32
+ Candidatus Kryptonia : 31
+ Candidatus Campbellbacteria : 31
+ Candidatus Gribaldobacteria : 29
+ Candidatus Absconditabacteria : 27
+ Candidatus Kapabacteria : 25
+ Candidatus Tagabacteria : 25
+ Dictyoglomota : 24
+ Candidatus Coatesbacteria : 24
+ Candidatus Cryosericota : 23
+ Candidatus Andersenbacteria : 23
+ Candidatus Terrybacteria : 22
+ Candidatus Moduliflexota : 21
+ Candidatus Ratteibacteria : 20
+ Candidatus Jacksonbacteria : 19
+ Candidatus Niyogibacteria : 18
+ Candidatus Blackburnbacteria : 18
+ Abditibacteriota : 18
+ Candidatus Firestonebacteria : 17
+ Candidatus Binatota : 17
+ Bacteria division CPR3 : 17
+ Candidatus Edwardsbacteria : 16
+ Candidatus Glassbacteria : 16
+ Candidatus Abyssubacteria : 15
+ Candidatus Wallbacteria : 15
+ Candidatus Handelsmanbacteria : 14
+ Candidatus Chisholmbacteria : 12
+ Candidatus Calescamantes : 11
+ candidate division CPR1 : 11
+ Coprothermobacterota : 11
+ Candidatus Brennerbacteria : 10
+ Candidatus Fraserbacteria : 10
+ Candidatus Delongbacteria : 9
+ Bacteria division CPR2 : 9
+ Candidatus Spechtbacteria : 9
+ Candidatus Veblenbacteria : 9
+ Candidatus Hydrothermae : 8
+ Candidatus Wirthbacteria : 7
+ Candidatus Goldbacteria : 7
+ Bacteria division LCP-89 : 7
+ Candidatus Blackallbacteria : 6
+ Candidatus Auribacterota : 6
+ Candidatus Hinthialibacterota : 6
+ Candidatus Fischerbacteria : 6
+ Raymondbacteria : 5
+ Candidatus Lindowbacteria : 5
+ Candidatus Muirbacteria : 5
+ Candidatus Mcinerneyibacteriota : 5
+ Candidatus Lithacetigenota : 4
+ Candidatus Abawacabacteria : 4
+ Candidatus Cerribacteria : 3
+ candidate division KD3-62 : 2
+ Candidatus Krumholzibacteriota : 1
