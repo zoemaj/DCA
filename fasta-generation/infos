@@ -1,0 +1,62 @@
+
+**How find your fasta file?**
+---------------------------
+
+-You can use [uniprot](https://www.uniprot.org) to find some homologous sequences of your choice.
+
+-If you want to extract from these sequences only the ones that are identical between Percentage_inf and Percentage_sup, you can use [Blast](https://blast.ncbi.nlm.nih.gov/Blast.cgi).
+    
+
+
+**How find your hmm file (indispensable for alignment)?**
+------------------------------------------------------------
+
+-You can type the name of your family in "search by text" (Hsp70, GrpE, ...) on [Interpro](https://www.ebi.ac.uk/interpro/) and download the hmm file ***from PFAM source file*** in the section ***curration***
+
+
+**Now that you have your fasta and hmm files, how align the sequences ?**
+-----------------------------------------------------------------
+
+-Please read the protocole from [hmmer.org](http://hmmer.org)
+
+-After downloading the folder hmmer-3.4 (from hmmer.org) you can use this command in the terminal:
+    (you need to be in the folder hmmer-3.4)
+
+    ```shell
+    $   hmmalign path_file_hmm path_file_fasta > path_file_sto
+    ```
+
+    This should export you a stockolm file in your folder
+
+
+**Termine with a last transformation**
+-----------------------------------------------------------------
+Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. You can finally use ***alignment.py*** provided in this folder. This will convert your stockolm file in fasta format and then will adjust the sequences according to a reference sequence. Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN. You will have a new alignment adjusted with BiP_HUMAN.
+
+    ```shell
+        $   python3  main_alignment.py path_seq_ref path_file_sto
+    ```
+
+(Note that if you already have your stockolm file converted into fasta file, you can still use this function.)
+
+Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.
+
+**How align two family together?**
+-----------------------------------------------------------------
+You first need to do the previous steps to have correct fasta files with sequences aligned in function of a reference sequence. Then you can use the following command:
+
+    ```shell
+        $   python3  main_TwoInOne.py file1 file2
+    ```
+
+
+
+
+
+
+
+
+
+
+
+

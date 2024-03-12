@@ -1,0 +1,39 @@
+# STOCKHOLM 1.0
+
+#=GS sp|P09372|GRPE_ECOLI DE Protein GrpE OS=Escherichia coli (strain K12) OX=83333 GN=grpE PE=1 SV=1
+#=GS sp|P38523|GRPE_YEAST DE GrpE protein homolog, mitochondrial OS=Saccharomyces cerevisiae (strain ATCC 204508 / S288c) OX=559292 GN=MGE1 PE=1 SV=1
+#=GS sp|Q97S73|GRPE_STRPN DE Protein GrpE OS=Streptococcus pneumoniae serotype 4 (strain ATCC BAA-334 / TIGR4) OX=170187 GN=grpE PE=1 SV=1
+#=GS sp|B8GXP4|GRPE_CAUVN DE Protein GrpE OS=Caulobacter vibrioides (strain NA1000 / CB15N) OX=565050 GN=grpE PE=3 SV=1
+#=GS sp|P0CAV1|GRPE_CAUVC DE Protein GrpE OS=Caulobacter vibrioides (strain ATCC 19089 / CB15) OX=190650 GN=grpE PE=3 SV=1
+#=GS sp|P15874|GRPE_BACSU DE Protein GrpE OS=Bacillus subtilis (strain 168) OX=224308 GN=grpE PE=1 SV=3
+
+sp|P09372|GRPE_ECOLI         ......................msskeqktpegqapeeiimdqheeieavepeasa---EQVDPRDEKVANLEAQLAEAQT---RERDGILRVKAEMENLRRRTELDIEKAHKFALEKFINELLPVIDSLDRALEVAD....kANPDMSAMVEGIELTLKSMLDVVRKFGVEVIAET.NVPLDPNVHQAIAMVESDD.VA
+#=GR sp|P09372|GRPE_ECOLI PP ......................*******************999999888776554...3344455555566666555444...5578899*********************************************99....8999999****************************.*******************.**
+sp|P38523|GRPE_YEAST         mrafsaatvrattrksfipmaprtpfvtpsftknvgsmrrmrfysdeakseesken--NEDLTEEQSEIKKLESQLSAKTKEASELKDRLLRSVADFRNLQQVTKKDIQKAKDFALQKFAKDLLESVDNFGHALNAFKeedlqKSKEISDLYTGVRMTRDVFENTLRKHGIEKLDPL.GEPFDPNKHEATFELPQPD.KE
+#=GR sp|P38523|GRPE_YEAST PP ************************************************99887654..6788999************************************************************************977666666666****************************.*******************.**
+sp|Q97S73|GRPE_STRPN         ..........................................maqdikneeveevq--EEEVVKTAEETTPEKSELDLANERADEFENKYLRAHAEMQNIQRRANEERQNLQRYRSQDLAKAILPSLDNLERALAV--.....-EGLTDDVKKGLGMVQESLIHALKEEGIEEIAAD.-GEFDHNYHMAIQTLPADDeHP
+#=GR sp|Q97S73|GRPE_STRPN PP ..........................................*****998886654..4566677777778888999999*******************************************************7........56667888************************5..57*************999899
+sp|B8GXP4|GRPE_CAUVN         ..........................................mtdeqtpaeempfe------------ADDAAQEIEALKLEVAQLKEQALRYAAEAENTKRRAEREMNDARAYAIQKFARDLLGAADNLGRATAHSPk..dsTDPAVKNFIIGVEMTEKELQSAFERNGLKKIDPAkGDKFDPHLHQAVTEQPSTE.VA
+#=GR sp|B8GXP4|GRPE_CAUVN PP ..........................................**999888777765............5677899*************************************************************999..88889999************************************************.**
+sp|P0CAV1|GRPE_CAUVC         ..........................................mtdeqtpaeempfe------------ADDAAQEIEALKLEVAQLKEQALRYAAEAENTKRRAEREMNDARAYAIQKFARDLLGAADNLGRATAHSPk..dsTDPAVKNFIIGVEMTEKELQSAFERNGLKKIDPAkGDKFDPHLHQAVTEQPSTE.VA
+#=GR sp|P0CAV1|GRPE_CAUVC PP ..........................................**999888777765............5677899*************************************************************999..88889999************************************************.**
+sp|P15874|GRPE_BACSU         ................................mseekqtveqneteeqeiieeqaa--ADEQQEETNESELLQNQINELQGLLEEKENKLLRVQADFENYKRRSRLEMEASQKYRSQNIVTDLLPALDSFERALQVEA.....DNEQTKSLLQGMEMVHRQLVEALKKEGVEAIEAV.GQEFDPNLHQAVMQAEDEN.YG
+#=GR sp|P15874|GRPE_BACSU PP ................................*************99999987666..467899999*********************************************************************99.....**********************************.*******************.**
+#=GC PP_cons                 ..........................................................55677788887788899999999***99*************************************************999.....888888***************************9.*99****************.**
+#=GC RF                      ........................................................xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.....xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxx.xx
+
+sp|P09372|GRPE_ECOLI         PGNVLGIMQKGYTLNGRTIRAAMVTVAKaka...................................
+#=GR sp|P09372|GRPE_ECOLI PP **************************97***...................................
+sp|P38523|GRPE_YEAST         PGTVFHVQQLGFTLNDRVIRPAKVGIVKgeen..................................
+#=GR sp|P38523|GRPE_YEAST PP ************************9986****..................................
+sp|Q97S73|GRPE_STRPN         VDTIAQVFQKGYKLHDRILRPAMVVV--yn....................................
+#=GR sp|Q97S73|GRPE_STRPN PP 9************************9..57....................................
+sp|B8GXP4|GRPE_CAUVN         AGGVLMVMQAGYELMGRLVRPAMVAVA-akgstgpaspdapaasanpyagaaaegdstggafdaka
+#=GR sp|B8GXP4|GRPE_CAUVN PP **************************8.6*************************************
+sp|P0CAV1|GRPE_CAUVC         AGGVLMVMQAGYELMGRLVRPAMVAVA-akgstgpaspdapaasanpyagaaaegdstggafdaka
+#=GR sp|P0CAV1|GRPE_CAUVC PP **************************8.6*************************************
+sp|P15874|GRPE_BACSU         SNIVVEEMQKGYKLKDRVIRPSMVKVNQ......................................
+#=GR sp|P15874|GRPE_BACSU PP **************************86......................................
+#=GC PP_cons                 *************************986......................................
+#=GC RF                      xxxxxxxxxxxxxxxxxxxxxxxxxxxx......................................
+//
