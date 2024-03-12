@@ -1,6 +1,6 @@
 [still in progress....]
 
-last update 11.03.24
+last update 12.03.24: preprocessing.py, folder fasta-generation and folder uniprot-tax
 
 Zoé Majeux
 
