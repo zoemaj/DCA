@@ -5,6 +5,67 @@ import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+def find_the_tax(file_name):
+    """
+    This function will find the different tax in the file and ask to the user which tax he wants to use.
+    It will return a dictionary with the node and the taxonomy elements to keep
+    input:  file_name       ->      name of the csv file containing the taxonomy of the sequences (usually in the uniprot-tax folder)
+                                    string
+    output: E_dic           ->      dictionary with the node as key and the taxonomy as value
+                                    dictionary
+            unique_class    ->      list of the different taxonomy elements to keep
+                                    list
+    """
+    print('-------------------------------------------------------')
+    print('-------------- ', file_name, ' ----------------')
+    print('-------------------------------------------------------')
+    with open(file_name, "r") as file:
+                lines = file.readlines()
+                #determine the number of different tax
+                diff_tax=lines[0].split(",") #the first element correpond to the node #for example gives['superkingdom', 'phylum\n']
+                last_name=diff_tax[-1].split("\n")[0]
+                diff_tax_new=diff_tax[:-1]
+                diff_tax_new.append(last_name)
+                print("The different tax are: ", diff_tax_new[1:]) #remove the print of the node
+                R2=input("Which tax do you want to use?")
+                while R2 not in diff_tax_new:
+                    R2=input("Please write a valid tax present in the list ", diff_tax_new, ": ")
+                #create a dictionary with the node and the division or the kingdom
+                E_dic = {}
+                for line in lines[1:]:
+                    list_tax = line.split(", ")
+                    node = list_tax[0]
+                    tax = list_tax[diff_tax_new.index(R2)]
+                    if " " in tax:
+                        tax= tax.split(" ")[0]
+                    if "\n" in tax:
+                        tax= tax.split("\n")[0]
+                    E_dic[node] = tax
+                print("The unique elements of the tax ", R2, " and their proportions in the file from uniprot, are the following: ")
+                #print firstly the unique element with lower proportion
+                unique_class=sorted(set(E_dic.values()), key=lambda x: list(E_dic.values()).count(x))
+                
+                for tax in unique_class:
+                    print(tax, ":", list(E_dic.values()).count(tax)/len(E_dic)*100, "%")
+                #ask to the user a list of element that he wants to keep
+                R3=input("Do you want to keep all the elements? (yes/no) ")
+                while R3!='yes' and R3!='no':
+                    R3=input("Please write yes or no ")
+                if R3=='no':
+                    R4=input("Please enter the elements you want to keep (separate by a comma and no space) ")
+                    R4=R4.split(", ")
+                    while set(R4).issubset(unique_class)==False: 
+                        for element in R4:
+                            if element not in unique_class:
+                                print("the type ", element, " is not in the ", R2, " list.")
+                        R4=input("Please enter valid elements ")
+                        
+                        R4=R4.split(",")
+                    unique_class=R4
+    return E_dic, unique_class
+
+
+
 def preprocessing(input_name, output_name, threshold=1.0) :
     """
     load the sequences from the input file, remove inserts, remove sequences with more than 10% gaps, encode the MSA into numbers
@@ -38,96 +99,74 @@ def preprocessing(input_name, output_name, threshold=1.0) :
             print("------- encode the MSA into numbers --------")
             MSA=amino_acids_to_numbers(MSA, type_file='fasta',tax=False)
         if A=='yes':
-            R=input("Please can you write on which protein are you working? (BiP, DnaK,..)")
+            number=input("How man different proteins type do you have in the MSA? For example if it is the homologous of two proteins together write 2.")
+            number=int(number)
+            list_file_prot=input("Please can you write on which protein are you working (BiP, DnaK,..)? separated by a comma and no space. ")
+            list_file_prot=list_file_prot.split(",")
+            print("The list of proteins you are working on is: ", list_file_prot)
+            while len(list_file_prot)!=number:
+                input("invalid number of proteins")
+                input("Please write the ", number, " proteins you are working on separated by a comma. ")
             #look in the folder uniprot-tax if there is a file with the name of the protein with at the end -tax.csv:
             #(the protein can be written in lower case or upper case or both
-            file_name="/"
-            if os.path.exists('uniprot-tax/'+R+"-tax.csv"):
-                file_name='uniprot-tax/'+R+"-tax.csv"
-            if file_name!="/":
-                print("The file ",file_name," is in the folder uniprot-tax.")
-                Found=input("Do you want to use this file? (yes/no) ")
-                while Found!="yes" and Found!="no":
-                    Found= input("Please write yes or no")
-            else:
-                print("No file with this protein name in folder the uniprot-tax been found...")
-            if Found=="no" or file_name=="/":
-                file_name=input("Please write the path for the file that you are looking for")
+            file_name_list=[]
+            for R in list_file_prot:
+                file_name="/"
+                if os.path.exists('uniprot-tax/'+R+"-tax.csv"):
+                    file_name='uniprot-tax/'+R+"-tax.csv"
+                if file_name!="/":
+                    print("The file ",file_name," is in the folder uniprot-tax.")
+                    Found=input("Do you want to use this file? (yes/no) ")
+                    while Found!="yes" and Found!="no":
+                        Found= input("Please write yes or no")
+                else:
+                    print("No file with the protein name "+R+" in folder the uniprot-tax been found...")
+                if Found=="no" or file_name=="/":
+                    file_name=input("Please write the path for the csv file that you are looking for the protein "+R)
+                file_name_list.append(file_name)
             MSA = filter_data(MSA,'fasta',float(threshold),tax=True)
-            #load the file uniprot-tax/BiP-tax.csv that contains the columns: Node,Superkingdom,Kingdom
-            with open(file_name, "r") as file:
-                lines = file.readlines()
-                #determine the number of different tax
-                diff_tax=lines[0].split(",") #the first element correpond to the node #for example gives['superkingdom', 'phylum\n']
-                last_name=diff_tax[-1].split("\n")[0]
-                diff_tax_new=diff_tax[:-1]
-                diff_tax_new.append(last_name)
-                print("The different tax are: ", diff_tax_new[1:]) #remove the print of the node
-                R2=input("Which tax do you want to use?")
-                while R2 not in diff_tax_new:
-                    R2=input("Please write a valid tax present in the list ", diff_tax_new, ": ")
-                #create a dictionary with the node and the division or the kingdom
-                E_dic = {}
-                for line in lines[1:]:
-                    list_tax = line.split(", ")
-                    node = list_tax[0]
-                    tax = list_tax[diff_tax_new.index(R2)]
-                    if " " in tax:
-                        tax= tax.split(" ")[0]
-                    if "\n" in tax:
-                        tax= tax.split("\n")[0]
-                    E_dic[node] = tax
-                print("The unique elements of the tax ", R2, " and their proportions in the file from uniprot, are the following: ")
-                #print firstly the unique element with lower proportion
-                unique_class=sorted(set(E_dic.values()), key=lambda x: list(E_dic.values()).count(x))
-                
-                for tax in unique_class:
-                    print(tax, ":", list(E_dic.values()).count(tax)/len(E_dic)*100, "%")
-                #ask to the user a list of element that he wants to keep
-                R3=input("Do you want to keep all the elements? (yes/no) ")
-                while R3!='yes' and R3!='no':
-                    R3=input("Please write yes or no ")
-                if R3=='no':
-                    R4=input("Please enter the elements you want to keep (separate by a comma) ")
-                    R4=R4.split(", ")
-                    while set(R4).issubset(unique_class)==False: 
-                        for element in R4:
-                            if element not in unique_class:
-                                print("the type ", element, " is not in the ", R2, " list.")
-                        R4=input("Please enter valid elements ")
-                        
-                        R4=R4.split(", ")
-                    unique_class=R4
+            big_E_dic={}
+            big_unique_class=[]
+            for file_name in file_name_list:
+                #find the different tax in the file and ask to the user which tax he wants to use
+                E_dic, unique_class=find_the_tax(file_name)
+                #add the dictionary to the bip_E_dic and to the existing key if it already exist
+                big_E_dic.update(E_dic)
+                #add the unique_class to the existing list but only if it is not already in the list
+                big_unique_class.extend([x for x in unique_class if x not in big_unique_class])
+                #print("The big unique class is: ", big_unique_class)
+            if number>1:
+                print("The unique elements keeped for the files are: ", big_unique_class)
             newMSA = []
             for sequence in tqdm(MSA):
                 #extrat the Description
                 #take only the part that start with OX
                 OX=sequence[0]
                 #find the node in the dictionary
-                if OX not in E_dic:
+                if OX not in big_E_dic:
                     tax='Other'
                 else:
-                    print(E_dic.get(OX))
-                    name=str(E_dic.get(OX)).split()[0]
-                    if name in unique_class:
+                    name=str(big_E_dic.get(OX)).split()[0]
+                    print(name)
+                    if name in big_unique_class:
                         tax=name
                     else:
                         tax='Other'
                 newMSA.append(sequence[1] + ", "+ tax)
             MSA=newMSA
             #find the number of different tax (last term of each sequence)
-            unique_tax = set([value.split(',')[1] for value in MSA])
-            print("unique_tax: ", unique_tax)
+            big_unique_tax = set([value.split(',')[1] for value in MSA])
+            print("unique_tax: ", big_unique_tax)
             K=21
-            print("You will need to take K=", len(unique_tax)+K, " in the model parameters file")
+            print("You will need to take K=", len(big_unique_tax)+K, " in the model parameters file")
             #save an histogram of the different tax in the MSA
-            plt.hist([value.split(',')[1] for value in MSA], bins=len(unique_tax))
+            plt.hist([value.split(',')[1] for value in MSA], bins=len(big_unique_tax))
             plt.title('Histogram of the different tax in the MSA')
             plt.xlabel('Tax')
             plt.ylabel('Number of sequences')
             plt.show()
             print("------- encode the MSA into numbers --------")
-            MSA=amino_acids_to_numbers(MSA, type_file='fasta', tax=True, Taxonomy=unique_tax)
+            MSA=amino_acids_to_numbers(MSA, type_file='fasta', tax=True, Taxonomy=big_unique_tax)
         print("MSA shape: ", MSA.shape)
 
     elif input_name.endswith('.csv'):
