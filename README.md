@@ -33,6 +33,7 @@ necessitated a new approach, involving code modifications and optimization. Thes
 To run these scripts, the user must have the following Python packages installed :
 
 * numpy
+* python
 * pandas
 * csv
 * gzip
@@ -42,6 +43,8 @@ To run these scripts, the user must have the following Python packages installed
 * itertools
 * matplotlib
 * os
+* tqdm
+* psutils
 
 ## Orgnanization of the files
 -----------------------------------------------------------
