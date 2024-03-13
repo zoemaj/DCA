@@ -217,11 +217,11 @@ folder needed: uniprot-tax
 Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
 * output_name : name that will be used to create the output file
-* threshold : The threshold for the percentage of gaps in a sequence. (Default 1.0)
+* threshold : The threshold for the percentage of gaps in a sequence. (**Default 1.0**)
 
 
 ```shell 
-$  python3 main_preprocessing.py data/PF00226.fasta PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv 0.1
+$  python3 main_preprocessing.py data/PF00226.fasta PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv -threshold 0.1
 ```
 
 exemple using the default values:
@@ -251,9 +251,9 @@ Arguments needed by the main :
     [SGD, lr, ,momentum, damping, wd, nesterov]
     [Adagrad, lr, lr_decay, wd, initial accumular value,epsilon]
     [Adadelta, lr, rho, epsilon, wd]
-  default= SGD, 0.008, 0.01, 0, 0, False
-* separations : the proportion that we keep for the training, the validation and the test perc_train,perc_val such that we take perc_train% of the data, (perc_train-perc_val)% of the remained data and finaly what is still there for the test data. default=(0.7,0.7)
-* nb_hidden_neurons : the number of hidden_neurons (Default=0, linear case)
+  **default= SGD, 0.008, 0.01, 0, 0, False**
+* separations : the proportion that we keep for the training, the validation and the test perc_train,perc_val such that we take perc_train% of the data, (perc_train-perc_val)% of the remained data and finaly what is still there for the test data. **default=(0.7,0.7)**
+* nb_hidden_neurons : the number of hidden_neurons (**Default=0, linear case**)
 
 Example of usage :
 
@@ -275,11 +275,11 @@ This module takes an MSA preprocessed using preprocessing.py and compute the wei
 Arguments needed by the main :
 * input_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * ouput_name : name for the output file containing the weights
-* threshold : The percentage of simulutude accepted. Default=0.8
+* threshold : The percentage of simulutude accepted. **Default=0.8**
 
 
 ```shell
-$ python3 main_weights.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gapps/weights-0.8/PF00226_weights-0.8.txt 0.8
+$ python3 main_weights.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gapps/weights-0.8/PF00226_weights-0.8.txt -threshold 0.8
 
 ```
 
@@ -310,8 +310,8 @@ Arguments needed by the main :
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
 * path: path where to load the file 
-* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-<n_models>,error_postions + output_name+0-<n_models>). Default:model_average_0-<n_models>
-* activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". Default=square. 
+* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-<n_models>,error_postions + output_name+0-<n_models>). **Default:model_average_0-<n_models>**
+* activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". **Default=square.** 
 
 Example of usage :
 
@@ -341,19 +341,19 @@ Arguments needed by the main :
 * model_name : name of the file containing the saved model from model.py. For number_models=1 write the path of the model, for number_models>1 write the path of the model without the numbers. As instance if you have model_test_1, model_test_2 you juste need to write model_test
 * L : length of the sequences (second dimension of the preprocessed MSA)
 * K : number of categories for the residues (21 if no considering class, 29 in general if considering class)
-* number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. Default=1
+* number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. **Default=1**
 * type average : if number_models=1 this is neglected. Otherwise it specifies the kind of average 
-    ("average_couplings" or "average_couplings_frob"). Default='average_couplings'
-* output_name : path of the output file that will contain the coupling coefficients. Default= "path(model_name)/<type_average>/couplings"
-* figure : Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. Default: False
+    ("average_couplings" or "average_couplings_frob"). **Default='average_couplings'**
+* output_name : path of the output file that will contain the coupling coefficients. **Default= "path(model_name)/<type_average>/couplings"**
+* figure : Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. **Default: False**
 * data_per_col : path for data_per_col.txt representing the number of possible a.a per column in the MSA (created during model.py) (Default: in the same place than the model(s))
-* model_type : type of the model, can be "linear", "non-linear" or "mix". Default: linear
+* model_type : type of the model, can be "linear", "non-linear" or "mix". **Default: linear**
 
 Example of usage :
 
 
 ```shell
-$ python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 5
+$ python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 -number_models 5
 
 ```
 for data PF00226 -> L=63, K=21
@@ -373,11 +373,12 @@ Argument needed by the main:
 * dcaFile : DCA prediction file
 * Ntop : The number of top ranked DCA contacts to plot.
 * contactThreshold : The threshold in Angstroms defining a structural contact
-* output_name : Name for the output file -> this is not from dca-Tools but has been added for simplifications
+* output_name : Name for the output file -> this is not from dca-Tools but has been added for simplifications. (**Default: will same to the same path than the one of pdbMap**)
+* ik : minimal sequence separation in the alignment to extract contacts (**default 4**)
 
 ```shell
 
-$ python3 dcaTools/plotTopContacts PF00226/contact-map/PF00226.map PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/couplings 150 8.5 PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/contact-150-8.5.png
+$ python3 dcaTools/plotTopContacts PF00226/contact-map/PF00226.map PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/couplings 150 8.5
 ```
 
 ***mapPDB***
