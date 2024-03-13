@@ -14,19 +14,17 @@ Prof. Paolo De Los Rios
 
 Welcome to the exploration of DnaJ domain and SIS1 protein sequences by using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. If you just want to read the information about the functions, please go directly to **Content and Organization** :)
 
-If you want to know everything, such as what is the goal of this project or how the folders are structured, please continue.
+If you want to know everything, such as "what is the goal of this project" or "how the folders are structured", please continue.
 
 If you want to test some functions with a short set of sequences please go directly to **TRY ME**
 
 ## Description
 -----------------------------------------------------------
-The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to predict the type of a residue given all other residues in a sequence and then to extract the knowledge learned by the network to do contact prediction.
+The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to **predict the type of a residue given all other residues** in a sequence and then to **extract the knowledge learned by the network to do contact prediction**.
 
 ## What about chaperons?
 -----------------------------------------------------------
-Misfolded proteins can lead to aggregation, resulting in neuromuscular and neurodegenerative diseases, or lysosomal dysfunction. Heat shock proteins 70 (HSP70)
-play a crucial role as chaperones in various protein folding processes, involving ATP hydrolysis facilitated by the J-domain binding to HSP70. Recent research have explored DnaJ domain and SIS1 protein sequences using Direct Coupling Analysis, pseudolikelihood maximization, and machine learning. However, inappropriate results
-necessitated a new approach, involving code modifications and optimization. These changes include a new couplings formulation, a variable number of amino acid values per position, a smaller batch size, hyperparameter tuning with different optimizers (Adam, AdamW, SGD, Adagrad, and AdaDelta), a comparison by taking the average across different models or couplings, or on the Frobenius norms. Additionally, a comparison was conducted by learning the taxonomy of the sequence or not. Furthermore, protein contact predictions were also performed for the Mitochondrial protein import protein MAS5 (gene YDJ1).
+Misfolded proteins can lead to aggregation, resulting in neuromuscular and neurodegenerative diseases, or lysosomal dysfunction. **Heat shock proteins 70 (HSP70)** play a crucial role as chaperones in various protein folding processes, involving **ATP hydrolysis facilitated by the J-domain binding to HSP70**. 
 
 ## Installation
 -----------------------------------------------------------
@@ -120,7 +118,7 @@ There are two parts:
 
 **PART I:**
 
-The construction of the fasta file and the structure 2D map for the contact prediction. 
+**The construction of the fasta file and the structure 2D map for the contact prediction**. 
 In this part you will:
 
    - align proteins from homologuous sequences data (uniprot, blast, hmm.org) :***alignment.py***
@@ -131,17 +129,17 @@ In this part you will:
      
 **PART II:**
 
-The preparation for the model building and learning, and the couplings between the different positions of amino acids.
+**The preparation for the model building and learning, and the couplings between the different positions of amino acids.**
 In this part you will:
 
    - define the proprieties of your model(s), the batchs, number of models, optimizer, ... with **learning_param.py**
-   - determine the weights of each sequences to make the distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". If a sequence is very semilar with others, its weight will be low to compensate its dominance): **weights.py**
+   - determine the weights of each sequences in order to have a distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". ***If a sequence is very semilar with others, its weight will be small to compensate its dominance***): **weights.py**
    - build and train the model(s): **model.py**
    - determine the couplings between the positions of amino acids **couplings.py**
 
 (Additionally, we can run the contact map with **dcaTools/plotTopContacts**)
 
-Each of them is accompanied by **a main file** that can be directly executed from command line.
+Each of them is accompanied by **a main file** that can be directly executed from command line: python3 main_<name>.py <parameter1> <parameter2> ...
 
 ### Part I: description of the files
 -----------------------------------------------------------
@@ -157,7 +155,7 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 ***How find your hmm file (indispensable for alignment)?***
 
 
--You can type the name of your family in "search by text" (Hsp70, GrpE, ...) on [Interpro](https://www.ebi.ac.uk/interpro/) and download the hmm file ***from PFAM source file*** in the section ***curration***
+-You can type the name of your family in "search by text" (Hsp70, GrpE, ...) in [Interpro](https://www.ebi.ac.uk/interpro/) and download the hmm file ***from PFAM source file*** in the section ***curration***
 
 
 ***Now that you have your fasta and hmm files, how align the sequences ?***
@@ -172,12 +170,12 @@ Each of them is accompanied by **a main file** that can be directly executed fro
  $   hmmalign path_file_hmm path_file_fasta > path_file_sto
  ```
 
-    This should export you a stockolm file in your folder
+    This will export you a stockolm file in the given path_file_sto
 
 
 ***End with a last transformation***
 
-Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. You can finally use ***alignment.py*** provided in this folder. This will convert your stockolm file in fasta format and then will adjust the sequences according to a reference sequence. Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN. You will have a new alignment adjusted with BiP_HUMAN.
+Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. To conclure, you can use ***alignment.py*** provided in this folder. This converts your stockolm file in fasta format and adjusts the sequences according to a reference sequence. ***Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN***. You will have a new alignment adjusted with BiP_HUMAN.
 
  ```shell
      $   python3  main_alignment.py path_seq_ref path_file_sto
@@ -185,7 +183,7 @@ Even if hmmer.org is an amazing tool, it will extract the new sequences with a l
 
 (Note that if you already have your stockolm file converted into fasta file, you can still use this function.)
 
-Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.
+***Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.***
 
 ***How align two family together?***
 
