@@ -80,7 +80,6 @@ def preprocessing(input_name, output_name, threshold=1.0) :
     """
     #load the sequences
     if input_name.endswith('.fasta'):
-        print("The input file is in fasta format, we don't consider the class type")
         MSA = list(SeqIO.parse(input_name, "fasta"))
         #transform the characters in upper case
         for sequence in MSA:
@@ -147,7 +146,6 @@ def preprocessing(input_name, output_name, threshold=1.0) :
                     tax='Other'
                 else:
                     name=str(big_E_dic.get(OX)).split()[0]
-                    print(name)
                     if name in big_unique_class:
                         tax=name
                     else:
@@ -164,7 +162,8 @@ def preprocessing(input_name, output_name, threshold=1.0) :
             plt.title('Histogram of the different tax in the MSA')
             plt.xlabel('Tax')
             plt.ylabel('Number of sequences')
-            plt.show()
+            #save it in the same path than output_name 
+            plt.savefig(output_name.split(".")[0]+"_distribution-tax.png")
             print("------- encode the MSA into numbers --------")
             MSA=amino_acids_to_numbers(MSA, type_file='fasta', tax=True, Taxonomy=big_unique_tax)
         print("MSA shape: ", MSA.shape)
@@ -230,7 +229,7 @@ def preprocessing(input_name, output_name, threshold=1.0) :
         os.makedirs(os.path.dirname(output_name))
     MSA.to_csv(output_name, header=None, index=None)
 
-def filter_data(MSA,type_file,threshold=0.1,tax=False) :
+def filter_data(MSA,type_file,threshold=1.0,tax=False) :
     """
     remove inserts and sequences with more that 10% gaps from the MSA given in parameter
     """
