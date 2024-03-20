@@ -1,10 +1,10 @@
 [still in progress....]
 
 
-last update 20.03.24: fasta-generation/TwoInOne.py, uniprot-tax/write-list.py, preprocessing.py
+**last update 20.03.24**: fasta-generation/TwoInOne.py, uniprot-tax/write-list.py, preprocessing.py
 
 
-update 12.03.24: preprocessing.py, folder fasta-generation and folder uniprot-tax
+**update 12.03.24**: preprocessing.py, folder fasta-generation and folder uniprot-tax
 
 Zoé Majeux
 
