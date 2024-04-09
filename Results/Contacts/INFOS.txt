@@ -1,1 +1,6 @@
-The informations about parameters (optimizers, batchs,epochs,...) are in the folder COUPLINGS
+The informations about parameters model (optimizers, batchs,epochs,...) are in the folder COUPLINGS
+
+The 2D structure contact are loaded as P_T_I.png or P_T.png
+with P=number of predictions, T=threshold in Angstrom, I=minimal sequence in the alignment to extract contacts (defaults 4)
+
+
