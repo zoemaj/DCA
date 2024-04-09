@@ -1,4 +1,8 @@
-If not precised the models are created with:
+If not precised, the models are created with:
   - optimizer: SGD, 0.008, 0.01, 0, 0, False
-  - 32 batchs
-  - 50 epochs
+  - batchs 32
+  - epochs 50
+
+1 model GrpE-DnaK: 120 epochs, 160 batchs, seed203
+1 model SPECIAL_TwoProt GrpE-DnaK: 120 epochs, 160 batchs, seed203
+
