@@ -170,7 +170,7 @@ Each of them is accompanied by **a main file** that can be directly executed fro
     (you need to be in the folder hmmer-3.4)
 
  ```shell
- $   hmmalign path_file_hmm path_file_fasta > path_file_sto
+    hmmalign path_file_hmm path_file_fasta > path_file_sto
  ```
 
     This will export you a stockolm file in the given path_file_sto
@@ -181,7 +181,7 @@ Each of them is accompanied by **a main file** that can be directly executed fro
 Even if hmmer.org is an amazing tool, it will extract the new sequences with a lot of gaps and some characters are in lowercase. To conclure, you can use ***alignment.py*** provided in this folder. This converts your stockolm file in fasta format and adjusts the sequences according to a reference sequence. ***Let's imagine you took BiP homologous in eukaryota: you will give to alignment.py your stockolm file and a a fasta file containing only the sequence BiP_HUMAN***. You will have a new alignment adjusted with BiP_HUMAN.
 
  ```shell
-     $   python3  main_alignment.py path_seq_ref path_file_sto
+     python3  main_alignment.py path_seq_ref path_file_sto
  ```
 
 (Note that if you already have your stockolm file converted into fasta file, you can still use this function.)
@@ -193,7 +193,7 @@ Even if hmmer.org is an amazing tool, it will extract the new sequences with a l
 You first need to do the previous steps to have correct fasta files with sequences aligned in function of a reference sequence. Then you can use the following command:
 
  ```shell
-     $   python3  main_TwoInOne.py file1 file2
+    python3  main_TwoInOne.py file1 file2
  ```
 ***How define the taxonomy of a sequence with write_list.py***
 folder needed: uniprot-tax/list
@@ -206,7 +206,7 @@ Arguments needed by the main :
 * path_file : The path where to find the list from uniprot.
   
 ```shell 
-$  python3 main_write_list.py uniprot-tax/list/bip-taxonomy.xls
+   python3 main_write_list.py uniprot-tax/list/bip-taxonomy.xls
 ```
 
 ***How process you file with preprocessing.py***
