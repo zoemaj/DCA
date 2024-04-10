@@ -55,28 +55,19 @@ Each protein has its own file with its name Z.
 - **For each folder Z** you have these different folders:
 * **preprocessing-X.Xgaps** where X.X is a float number indicating the percent of max gaps (ex preprocessing-0.1gaps for 10%)
 
-    * Z-preprocessed-X.Xgaps.csv
+    * preprocessed-X.Xgaps.csv
     * **weights-Y.Y** where Y.Y is a float number indicating the percentage of similarity (ex: weights-0.8 for 80%)
 
         * weights-Y.Y.txt
-        * **model_MODEL.TYPE-Eepochs** where MODEL.TYPE is "linear, non-linear or mix" and E is an int number for the epochs (ex: model_linear-50epochs)
+        * **model_MODEL.TYPE-Eepochs-Bbatchs/seedS** where MODEL.TYPE is "linear od non-linear", E is an int number for the epochs, B is an int number for the batchs and S an int number for the random choice (ex: model_linear-50epochs-32batchs/seed203). Note that is B is not precised it means that it is done with 32 batchs.
+          
+             * model_0,...,model_n,model_average0-n,errors_0,...,errors_n,errors_positions_0,...,errors_positions_n,...
+             * **average-models** couplings only done on the model_average
+             * **average-couplings** couplings and ising done on each models before taken the average and then the frobenius norm
+             * **average-couplings-and-frob** couplings, ising and frobenius norm done on each models before taken the average
 
-            * **Adam-Bbatch** where B is a int number for the batch size (ex: Adam-64batchs)
-                * Llr-B1beta1-B2beta2-Eepsilon-Wwd-Aamsgrad where L is the learning rate, B1 is beta1, B2 is beta2, E is epsilon, W is the weight decay and A is the amsgrad with T for true and F for false (ex: 0.001lr-0.9beta1-0.999beta2-1e-8epsilon-0wd-Famsgrad)
-            
-            * **AdamW-Bbatch** where B is a int number for the batch size (ex: Adam-64batchs)
-                * Llr-B1beta1-B2beta2-Eepsilon-Wwd-Aamsgrad where L is the learning rate, B1 is beta1, B2 is beta2, E is epsilon, W is the weight decay and A is the amsgrad (ex: 0.001lr-0.9beta1-0.999beta2-1e-8epsilon-0.01wd-Famsgrad)
+- Additionally you have these different folders:
 
-            * **SDG-Bbatch** where B is a int number for the batch size (ex: SDG-32batchs)
-                * Llr-Mmom-Ddampening-Wwd-Nnesterov  where L is the learning rate, M is the momentum, D is the dampening, W is the weight decay and N is the nesterov with F for false and T for true (ex with default values: 0.001lr-0mom-0dampening-0wd-Fnesterov)
-            
-            * **Adagrad-Bbatch** where B is a int number for the batch size (ex: SDG-32batchs)
-                * Llr-LDld-Wwd-Ainitaccum-Eeps where L is the learning rate,LD is the learning decay, W is the weight decay, A is the inital accumulator value and E is the epsilon with F for false and T for true (ex with default values:  0.01lr-0ld-0wd-0initaccum-1e-10eps)
-
-            * **Adadelta-Bbatch** where B is a int number for the batch size (ex: Adadelta-32batch)
-                * Llr-Rrho-Eepsilon-Wwd where L is the learning rate, R is rho, E is epsilon and W is the weight decay (ex with default values: 1.0lr-0.9rho-1e-6epsilon-0wd)
-                    default val
-            
 * **map**
     * Z.map where Z is the name of the protein
 * **pdb**
@@ -86,38 +77,9 @@ Each protein has its own file with its name Z.
 * **data** (Note: the folder data contain proteins used for my master of specialisation and the folder data-MP for the data used in my master project. Please feel free to create your own data folder.)
     * Z.fasta where Z is the name of the protein
 
-Note that inside **each folder of OPTIMIZER.Type-Bbatch** you can find the model numeroted, the model averaged for a selection of models numeroted, the png images and a folder for the average-couplings and average-couplings-frob
-for exemple you can find
-* **average-couplings** 
-    * contact_0-4-300-8.5.png : a contact plot for 300 predictions on the models 0,1,2,3,4
-    * couplings_0-4 : the couplings file for the average with the models 0,1,2,3,4
-    * errors_positions_0.4.txt
-    * errors_0-4.txt
-* **average-couplings-and-frob**
-    * contact_3-5-150-8.5.png : a contact plot for 150 predictions on the models 3,4,5
-    * couplings_3-5 : the couplings file for the average with the models 3,4,5
-    * errors_positions_3-5.txt
-    * errors_3-5.txt
-* **average-models**
-    * contact_150-8.5.png : a contact plot for 150 predictions on the models 3,4,5
-    * couplings_0-30 : the couplings file for the average with the 30 firstly models
-    * errors_positions_0-30.txt
-    * errors_0-30.txt
-* contact_0-4-70-8.5.png : a contact plot for 70 predictions on the model average
-* errors_positions_0-4.txt : the errors on the model average from the models 0,1,2,3,4
-* errors_0-4.txt 
-* model_0
-* model_1
-* model_2
-* model_3
-* model_4
-* model_5
-* model_average_0-4
-
 ## Content and Organization
 -----------------------------------------------------------
 There are two parts:
-
 
 **PART I:**
 
