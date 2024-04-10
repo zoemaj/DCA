@@ -53,7 +53,7 @@ def find_the_tax(file_name):
                     R3=input("Please write yes or no ")
                 if R3=='no':
                     R4=input("Please enter the elements you want to keep (separate by a comma and no space) ")
-                    R4=R4.split(", ")
+                    R4=R4.split(",")
                     while set(R4).issubset(unique_class)==False: 
                         for element in R4:
                             if element not in unique_class:
@@ -170,7 +170,14 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
             plt.xlabel('Tax')
             plt.ylabel('Number of sequences')
             #save it in the same path than output_name 
-            plt.savefig(output_name.split(".")[0]+"_distribution-tax.png")
+            #plt.savefig(output_name.split(".")[0]+"_distribution-tax.png")
+            path_hist=output_name.split("/")[:-1]
+            plt.savefig("/".join(path_hist)+"/distribution-tax.png")
+            #save also a text file with two colomns: the tax and the number associated (22,23,...,K-1)
+            with open("/".join(path_hist)+"/distribution-tax.txt", "w") as file:
+                for i, tax in enumerate(big_unique_tax):
+                    id=i+21
+                    file.write(tax + " : " + str(id) + "\n")
             print("------- encode the MSA into numbers --------")
             MSA=amino_acids_to_numbers(MSA, type_file='fasta', tax=True, Taxonomy=big_unique_tax)
         print("MSA shape: ", MSA.shape)
