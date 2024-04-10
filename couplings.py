@@ -441,7 +441,16 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
     ###################################################################################
     ###################################################################################
     try:
-        threshold_preprocessed=model_name.split('/')[1].split('-')[-1].split('gaps')[0]
+        threshold_preprocessed=model_name.split('/')[1].split('-')[-1]
+        #check if endswith "gaps"
+        if threshold_preprocessed.endswith("gaps"):
+            threshold_preprocessed=threshold_preprocessed[:-4] #remove the "gaps" at the end
+        
+    except:
+        pass
+    try:
+        #check that threshold_preprocessed is composed of digits and a dot
+        float(threshold_preprocessed)
     except:
         threshold_preprocessed=input("Please enter the threshold preprocessed used")
     if K==21:
