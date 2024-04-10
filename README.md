@@ -61,6 +61,7 @@ Each protein has its own file with its name Z.
 
         * weights-Y.Y.txt
         * **model_MODEL.TYPE-Eepochs-Bbatchs/seedS** where MODEL.TYPE is "linear od non-linear", E is an int number for the epochs, B is an int number for the batchs and S an int number for the random choice (ex: model_linear-50epochs-32batchs/seed203). Note that is B is not precised it means that it is done with 32 batchs.
+     
              * data_per_col.txt (representing which value (between 0 and K) is possible for each position 
              * model_0,...,model_n,model_average0-n,errors_0,...,errors_n,errors_positions_0,...,errors_positions_n,...
              * **average-models** couplings only done on the model_average
