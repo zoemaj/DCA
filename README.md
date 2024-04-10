@@ -2,7 +2,7 @@
 
 
 
-**last update 10.03.24**: preprocessing.py, main_preprocessing.py
+**last update 10.03.24**: preprocessing.py, main_preprocessing.py, weights.py, main_weights.py
 
 
 Zoé Majeux
