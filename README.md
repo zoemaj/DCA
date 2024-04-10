@@ -222,13 +222,13 @@ Arguments needed by the main :
 
 
 ```shell 
-  python3 main_preprocessing.py data/PF00226.fasta 
+  python3 main_preprocessing.py DnaK/DnaK.fasta 
 ```
 
 exemple using not the default values:
 
 ```shell
-  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta -output_name DnaK-with-tax/preprocessing-1.0gaps/preprocessed -threshold 0.1
+  python3 main_preprocessing.py DnaK/DnaK.fasta -output_name DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.1
 ```
 
 ### Part II: description of the files
@@ -275,19 +275,19 @@ This module takes an MSA preprocessed using preprocessing.py and compute the wei
 
 Arguments needed by the main :
 * input_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
-* ouput_name : name for the output file containing the weights
+* ouput_name : name for the output file containing the weights **Default=path<input_name>/weights-<threshold>/weights-<threshold>.txt**
 * threshold : The percentage of simulutude accepted. **Default=0.8**
 
 
 ```shell
-$ python3 main_weights.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gapps/weights-0.8/PF00226_weights-0.8.txt -threshold 0.8
+$ python3 main_weights.py DnaK/preprocessing-0.1gaps/DnaK_preprocessed-0.1gaps.csv 
 
 ```
 
 Exemple with default value:
 
 ```shell
-$ python3 main_weights.py DnaK-with-tax/preprocessing-1.0gaps/preprocessed-1.0gaps DnaK-with-tax/preprocessing-1.0gaps/weights-0.8/weights-0.8.txt
+$ python3 main_weights.py DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps -output_name DnaK/preprocessing-0.1gaps/DnaK_weights-0.8.txt -threshold 0.1
 
 ```
 
