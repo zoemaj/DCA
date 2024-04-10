@@ -310,7 +310,7 @@ Arguments needed by the main :
 * MSA_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
-* path: path where to load the file 
+* path: path where to load the file  **Default:path<weights_name>/model_<model_type>-<epochs>epochs-<batchs>batchs/seed<seed>**
 * output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-<n_models>,error_postions + output_name+0-<n_models>). **Default:model_average_0-<n_models>**
 * activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". **Default=square.** 
 
