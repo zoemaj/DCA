@@ -351,24 +351,24 @@ Example of usage :
 
 Preprocessing:
 ```shell
-python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv
+python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta -threshold 0.1
 ```
 Weights:
 ```shell
-python3 main_weights.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt -threshold 0.3
+python3 main_weights.py TRY_ME/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.3
 ```
 Learning Parameters:
 ```shell
-python3 main_learning_param.py 15 32 linear 2 203 Parameters_learning/SDG_15_2models_203_0.008lr
+python3 main_learning_param.py linear 2 203 Parameters_learning/SDG_15_2models_203_0.008lr
 ```
 Model:
 ``` shell
-python3 main_model.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov
+python3 main_model.py TRY_ME/preprocessing-1.0gaps/preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt 
 ```
 Couplings:
 ```shell
 
-python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/model 63 21 -number_models 2 -type_average "average_couplings_frob" 
+python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/model -number_models 2 -type_average average_couplings_frob
 ```
 
 
