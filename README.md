@@ -345,7 +345,7 @@ Plots a user-defined number of highest-ranking DCA predicted contacts, overlaid 
 Plots the precision curves for DCA predicted contacts. The output file format of couplings.py is adapted to make it suitable for this script
 
 # TRY ME
-You can find a test into the folder TRY_ME to try the different modules before to run long simulation. The sequences are the 30 first sequences of the j-domain PF00226.
+You can find a test into the folder TRY_ME to try the different modules before to run long simulation. Don't panick if the 2D structure is not good, it is normal since TRY_ME has not a lot of sequences
 
 Example of usage :
 
