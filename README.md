@@ -259,12 +259,12 @@ Arguments needed by the main :
 Example of usage :
 
 ```shell
-$ python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr -optimizer SGD,0.005,0.01,0,0,False -separations 0.8,0.8  
+python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr -optimizer SGD,0.005,0.01,0,0,False -separations 0.8,0.8  
 ```
 or by using the default values:
 
 ```shell
-$ python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr
+python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr
 
 ```
 
@@ -280,14 +280,14 @@ Arguments needed by the main :
 
 
 ```shell
-$ python3 main_weights.py DnaK/preprocessing-0.1gaps/DnaK_preprocessed-0.1gaps.csv 
+python3 main_weights.py DnaK/preprocessing-0.1gaps/DnaK_preprocessed-0.1gaps.csv 
 
 ```
 
 Exemple with default value:
 
 ```shell
-$ python3 main_weights.py DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps -output_name DnaK/preprocessing-0.1gaps/DnaK_weights-0.8.txt -threshold 0.1
+python3 main_weights.py DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps -output_name DnaK/preprocessing-0.1gaps/DnaK_weights-0.8.txt -threshold 0.1
 
 ```
 
@@ -317,7 +317,7 @@ Arguments needed by the main :
 Example of usage :
 
 ``` shell
-$ python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 
+python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 
 ```
 
 **What if you want to average several model(s) from a same folder?**
@@ -327,7 +327,7 @@ This case can happen if for example you have already made 5 models with seed203 
    * model_name : The name of the models to average (without the index number _i)
    * n_models : The number of models to average
    ``` shell
-   $ python3 main_average_model.py BiP/preprocessing-1.0gaps/weights-0.8/model_linear-50epochs/10models/model 10
+   python3 main_average_model.py BiP/preprocessing-1.0gaps/weights-0.8/model_linear-50epochs/10models/model 10
 
    ```
    
@@ -354,7 +354,7 @@ Example of usage :
 
 
 ```shell
-$ python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 -number_models 5
+python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 -number_models 5
 
 ```
 for data PF00226 -> L=63, K=21
@@ -379,7 +379,7 @@ Argument needed by the main:
 
 ```shell
 
-$ python3 dcaTools/plotTopContacts PF00226/contact-map/PF00226.map PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/couplings 150 8.5
+python3 dcaTools/plotTopContacts PF00226/contact-map/PF00226.map PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/couplings 150 8.5
 ```
 
 ***mapPDB***
@@ -401,24 +401,24 @@ Example of usage :
 
 Preprocessing:
 ```shell
-$ python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv
+python3 main_preprocessing.py TRY_ME/data/TRY_ME.fasta TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv
 ```
 Weights:
 ```shell
-$ python3 main_weights.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt -threshold 0.3
+python3 main_weights.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt -threshold 0.3
 ```
 Learning Parameters:
 ```shell
-$ python3 main_learning_param.py 15 32 linear 2 203 Parameters_learning/SDG_15_2models_203_0.008lr
+python3 main_learning_param.py 15 32 linear 2 203 Parameters_learning/SDG_15_2models_203_0.008lr
 ```
 Model:
 ``` shell
-$ python3 main_model.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov
+python3 main_model.py TRY_ME/preprocessing-1.0gaps/TRY_ME_preprocessed-1.0gaps.csv TRY_ME/preprocessing-1.0gaps/weights-0.3/TRY_ME_weights-0.3.txt Parameters_learning/SDG_15_2models_203_0.008lr.txt TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov
 ```
 Couplings:
 ```shell
 
-$ python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/model 63 21 -number_models 2 -type_average "average_couplings_frob" 
+python3 main_couplings.py TRY_ME/preprocessing-1.0gaps/weights-0.3/model_linear-15epochs/SDG-32batch/0.001lr-0.01mom-0dampening-0wd-Fnesterov/model 63 21 -number_models 2 -type_average "average_couplings_frob" 
 ```
 
 
