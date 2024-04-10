@@ -56,6 +56,7 @@ Each protein has its own file with its name Z.
 * **preprocessing-X.Xgaps** where X.X is a float number indicating the percent of max gaps (ex preprocessing-0.1gaps for 10%)
 
     * preprocessed-X.Xgaps.csv
+    * INFOS_no_tax.txt and INFOS_tax.txt where you can find for each preprocessing made with X.Xgaps the number of sequences N, the length L and the number K of different values possible
     * **weights-Y.Y** where Y.Y is a float number indicating the percentage of similarity (ex: weights-0.8 for 80%)
 
         * weights-Y.Y.txt
