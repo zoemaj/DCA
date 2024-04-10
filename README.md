@@ -259,12 +259,7 @@ Arguments needed by the main :
 Example of usage :
 
 ```shell
-python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr -optimizer SGD,0.005,0.01,0,0,False -separations 0.8,0.8  
-```
-or by using the default values:
-
-```shell
-python3 main_learning_param.py 50 32 linear 2 Parameters_learning/SDG_50_2models_203_0.008lr
+python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr
 
 ```
 
@@ -317,7 +312,7 @@ Arguments needed by the main :
 Example of usage :
 
 ``` shell
-python3 main_model.py PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv PF00226/preprocessing-0.1gaps/weights-0.8/PF00226_weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203 
+python3 main_model.py DnaK/preprocessing-0.1gaps/preprocessed-0.1gaps.csv DnaK/preprocessing-0.1gaps/weights-0.8/weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt
 ```
 
 **What if you want to average several model(s) from a same folder?**
