@@ -77,6 +77,10 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
         path_folder="/".join(path_folder)
         output_name=path_folder+"/preprocessing-"+str(threshold)+"gaps/preprocessed-1.0gaps.csv"
         print("The output file will be saved in the folder ", output_name)
+    else:
+        path_folder=output_name.split("/")[:-1] #take the path of the input file
+        path_folder="/".join(path_folder)
+
 
     K=21
     #load the sequences
