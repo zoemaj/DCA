@@ -335,8 +335,6 @@ the matrix of couplings symetrical by averaging with its transpose, takes the Fr
 
 Arguments needed by the main :
 * model_name : name of the file containing the saved model from model.py. For number_models=1 write the path of the model, for number_models>1 write the path of the model without the numbers. As instance if you have model_test_1, model_test_2 you juste need to write model_test
-* L : length of the sequences (second dimension of the preprocessed MSA)
-* K : number of categories for the residues (21 if no considering class, 29 in general if considering class)
 * number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. **Default=1**
 * type average : if number_models=1 this is neglected. Otherwise it specifies the kind of average 
     ("average_couplings" or "average_couplings_frob"). **Default='average_couplings'**
@@ -349,15 +347,8 @@ Example of usage :
 
 
 ```shell
-python3 main_couplings.py PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model 63 21 -number_models 5
-
+python3 main_couplings.py DnaK/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model -number_models 5
 ```
-for data PF00226 -> L=63, K=21
-for data P25294_SIS1_YEAST -> L=352, K=21
-for data A6ZS16_YEAS7 -> L=409, K=21
-...
-
-BE CAREFUL: need to take L+1 if we have chose with taxonomy
 
 ***
 In addition to these 4 modules. The directory dcaTools contains [3 scripts](https://gitlab.com/ducciomalinverni/dcaTools.git) that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found [here](https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16).
