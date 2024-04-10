@@ -6,23 +6,20 @@ import os
 import psutil
 import subprocess
 from tqdm import tqdm
+from itertools import chain
+import gc
 
 # Function to print CPU usage percentage -> not used for now but can be useful in case of debugging
 def print_cpu_usage():
     cpu_percent = psutil.cpu_percent(interval=1)  # Get CPU usage percentage for the last 1 second
     print("CPU Usage:", cpu_percent, "%")
 
-####################################################################################################################################
-###### The following class has not been modified from Aude Maier code (2022), is not used in this version ##########################
-###### It is still there if one wants to adapt it and use it in the future #########################################################
 class SquareActivation(nn.Module) :
   'custom square activation'
   def __init__(self) :
     super().__init__()
   def forward(self, input) :
     return input.square()
-####################################################################################################################################
-####################################################################################################################################
 
 ####################################################################################################################################
 ########################## CREATION OF THE MASKED   ################################################################################
@@ -65,6 +62,62 @@ def generate_indices_mask(L,K,data_per_col,path):
                         file.write(str(b) + " " + str(index_amino) + "\n")
       print("The file has been successfully created : ",path+"/indice_mask.txt")
     return
+
+def generate_indices_mask_non_linear(L,K,nb_hidden_neurons,data_per_col,path):
+    ''' 
+    This function is used to generate the indices that will be used to mask the model.
+    The indices are written in a txt file that will be saved in the folder.
+      (like this we do not need to stock the list of indices and we don't need to compute them again at each time)
+    for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
+    we mask also the links between the amino acids that are not possible at a position (identities)
+    input:
+        L: length of the sequences
+        K: number of different amino acids
+        data_per_col: for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
+        path: path where the file will be saved
+    '''
+    #check if the file already exists
+    path1=path+"/indice_mask1.txt" #disconnection between input and hidden 
+    path2=path+"/indice_mask2.txt" #disconnection between hidden and output
+    if os.path.exists(path1) and os.path.exists(path2):
+      #in this case, we will not compute it again
+      print(f"The files {path1} and {path2} already exists, we will not compute it again")
+      print(f"You can find it at: {path1} and {path2}")
+    
+    else: 
+      print("Writing the indices_mask...")
+      with open(path1, "w") as file1:
+        with open(path2, "w") as file2:
+          for j in range(0,L):
+            for a in range(j*nb_hidden_neurons,(j+1)*nb_hidden_neurons): #for each hidden layer
+              for b in range(j*K,(j+1)*K): #for each amino acid j
+                file1.write(str(a) + " " + str(b) + "\n") #disconnection between the input and the hidden layer
+              if (j+1)<L: #if we are not at the last hidden layer
+                for b in chain(range(0,j*K),range((j+1)*K,L*K)): #for each amino acid except amino acid j
+                  file2.write(str(b) + " " + str(a) + "\n") #disconnection between the the hidden layer j and all the other amino acids except amino acid j
+              else: #if we are at the last hidden layer
+                for b in range(0,j*K):
+                  file2.write(str(b) + " " + str(a) + "\n") 
+          for col_i in range(L): #need to mask the links between the amino acids that are not possible at a position
+              for amino in range(K):
+                  if data_per_col[amino, col_i] == 1:
+                      index_amino = col_i * K + amino #index of the amino acid in the input layer
+                      #deconnect this index_amino with all the hidden layer except the one in position col_i
+                      if (col_i+1)<L:
+                        for b in chain(range(0,col_i*nb_hidden_neurons),range((col_i+1)*nb_hidden_neurons,L*nb_hidden_neurons)):
+                            file1.write( str(b)+ " "+ str(index_amino) + "\n")
+                      else:
+                        for b in range(0,col_i*nb_hidden_neurons):
+                            file1.write( str(b)+ " " +str(index_amino) + "\n")
+                      #now deconnect the output coresponding to this amino acid with the hidden layer
+                      for b in range(col_i*nb_hidden_neurons +amino, (col_i+1)*nb_hidden_neurons):
+                          file2.write( str(index_amino)+ " " + str(b) + "\n")
+                      
+                        
+      print(f"The files {path1} and {path2} have been successfully created")
+    return
+
+
 
 class MaskedLinear(nn.Module):
   """
@@ -128,42 +181,34 @@ class LinearNetwork(nn.Module):
     x = self.softmax(x) #apply softmax
     x = torch.reshape(x, (len(x), self.L*self.K)) #reshape to have the same shape as the input
     return x
-  
+
+class NonLinearNetwork(nn.Module):
+  def __init__(self,indices_mask1,indices_mask2,in_dim,hidden_dim,original_shape,activation="square"):
+    super(NonLinearNetwork, self).__init__()
+    if activation=="square":
+      activation_function=SquareActivation()
+    elif activation=="tanh":
+      activation_function=nn.Tanh()
+    else:
+      print("invalid activation function, square taken instead")
+      activation_function=SquareActivation()
+    
+    self.non_linear=nn.Sequential(MaskedLinear(in_dim,hidden_dim,indices_mask1),activation_function,MaskedLinear(hidden_dim,in_dim,indices_mask2))
+    self.softmax=nn.Softmax(dim=2)
+
+    (_,L,K)=original_shape
+    self.L=L
+    self.K=K
+  def forward(self,x):
+    x=self.non_linear(x)
+    x=torch.reshape(x,(len(x),self.L,self.K))
+    x=self.softmax(x)
+    x=torch.reshape(x,(len(x),self.L*self.K))
+    return x
 
 ####################################################################################################################################
 ###### The following classes have not been modified from Aude Maier code (2022), is not used in this version ######################
 ###### there are still there if one wants to adapt them and use them in the future ######################################################
-class NonLinearNetwork(nn.Module):
-  'model with hidden layer and square / tanh activation on the hidden layer'
-  def __init__(self, indices_mask1, indices_mask2, in_dim, hidden_dim, original_shape, activation="square"):
-    """
-    indices_mask1: list of input and hidden neurons that must be disconnected
-    indices_mask2: list of hidden and output neurons that must be disconnected
-    in_dim: dimension of input layer
-    hidden_dim: dimension of hidden layer
-    original_shape: original shape of the MSA (N,L,K)
-    activation: activation for the hidden layer, must be "square" or "tanh" otherwise square is taken by default
-    """
-    super(NonLinearNetwork, self).__init__()
-    #define activation function
-    if activation == "square" : activation_function = SquareActivation()
-    elif activation == "tanh" : activation_function = nn.Tanh()
-    else :
-      print("invalid activation function, square taken instead")
-      activation_function = SquareActivation()
-    #elements of the network
-    self.non_linear = nn.Sequential(MaskedLinear(in_dim, hidden_dim, indices_mask1), activation_function, MaskedLinear(hidden_dim, in_dim, indices_mask2))
-    self.softmax = nn.Softmax(dim=2)   
-    (_,L,K) = original_shape
-    self.L = L
-    self.K = K
-  def forward(self, x):
-    x = self.non_linear(x)
-    #apply softmax on residues
-    x = torch.reshape(x, (len(x), self.L, self.K))
-    x = self.softmax(x)
-    x = torch.reshape(x, (len(x), self.L*self.K))
-    return x
 class MixNetwork(nn.Module) :
   'network mixing linear model and model with hidden layer and square/tanh activation'
   def __init__(self, indices_mask1, indices_mask2, indices_mask_linear, in_dim, hidden_dim, original_shape, activation="square"):
@@ -391,7 +436,10 @@ def write_the_optimizer(model, optimizer):
         print("Error: optimizer list is not correct or need to be defined in file model.py")
         return
     
-def build_and_train_model(data,labels, original_shape, separation, model_type, max_epochs, batch_size, validation, test, optim, device, use_cuda, path):
+def build_and_train_model(data,labels, original_shape, separation, model_type,activation, nb_hidden_neurons, max_epochs, batch_size, validation, test, optim, device, use_cuda, path):
+  #print the memory usage of the cpu and the gpu
+  print_cpu_usage()
+  
   list_train_err = []
   list_val_err = []
   list_test_err = []
@@ -403,6 +451,7 @@ def build_and_train_model(data,labels, original_shape, separation, model_type, m
   print("size validation_set",validation_set.data.shape)
   print("size test_set",test_set.data.shape)
   print("the datasets have been successfully created")
+  (N,L,K) = original_shape
   params = {'batch_size': batch_size, #modif
             'shuffle': True,
             'num_workers':1,
@@ -411,65 +460,73 @@ def build_and_train_model(data,labels, original_shape, separation, model_type, m
     #create data loader for the training_set
   training_generator = torch.utils.data.DataLoader(training_set, **params)
    #define the model according to model_type (linear, non-linear or mix) and, if not linear, activation (square or tanh)
+  print("-----------------------------")
+  ##########################################################################
+  ################# CREATE THE LIST OF MODELS AND OPTIMIZERS ###############
+  ##########################################################################
   if model_type == "linear" :
-    print("-----------------------------")
-    ##########################################################################
-    ################# CREATE THE LIST OF MODELS AND OPTIMIZERS ###############
-    ##########################################################################
-    print("Initialisation of the model...")   
+    print("Initialisation of the linear model...")   
     model=LinearNetwork(path+"/indice_mask.txt", training_set.labels.shape[1], original_shape)
     model=model.to(device)
-    print("-----------------------------")
-    print("Initialisation of the optimizer...")   
-    optimizer= write_the_optimizer(model, optim)
-    print("-----------------------------")
-    print("-----------------------------")
-    print("Training...")  
-    # Loop over epochs
-    for epoch in range(max_epochs):
-      model.train()
-      optimizer=optimizer #get the optimizer for the current model
-      for local_batch, local_labels in training_generator:
-          optimizer.zero_grad()
-          local_batch, local_labels = local_batch.to(device), local_labels.to(device)
-          loss = train(local_batch, local_labels, model, loss_function) #get the loss for the current model
-          loss.backward() #backpropagation
-          optimizer.step() #update the weights
-      # Compute and store the errors
-      train_err = error(training_set.data, training_set.labels, model, original_shape)
-      list_train_err.append(train_err)
-      if epoch%10==0:
-        print("epoch: ", epoch)
-        print("train error model: ", train_err)
-      if validation==True:
-          val_err = error(validation_set.data, validation_set.labels, model, original_shape)
-          list_val_err.append(val_err)
-          if epoch%10==0:
-            print("test error model: ", test_err)
-      if test==True:
-          test_err = error(test_set.data, test_set.labels, model, original_shape)
-          list_test_err.append(test_err)
-          if epoch%10==0:
-            print("test error model: ", test_err)
-      #print(" Epoch {} complete".format(epoch))
-    ##################################################################################
-    ##################################################################################
-      
-    #put all the errors in a list
-    errors = [list_train_err]
-    if validation == True :
-      errors.append(list_val_err)
-    if test == True :
-      errors.append(list_test_err)
-    errors_positions = [error_positions(training_set.data, training_set.labels, model, original_shape)]
-    if validation == True : errors_positions.append(error_positions(validation_set.data, validation_set.labels, model, original_shape))
-    if test == True : errors_positions.append(error_positions(test_set.data, test_set.labels, model, original_shape)) 
-    return model, errors, errors_positions
+  elif model_type == "non-linear" :
+    print(f"Initialisation of the non linear model with activation {activation}...")
+    model=NonLinearNetwork(path+"/indice_mask1.txt", path+"/indice_mask2.txt", L*K, L*nb_hidden_neurons, original_shape)
+    model=model.to(device)
   else:
-     print("For now only the linear model is implemented")
-     return
+    print("For now only the linear and non linear model are implemented")
   
-def execute(MSA_file, weights_file, model_params, path, output_name='/', activation="square") :
+  print("-----------------------------")
+  print("Initialisation of the optimizer...")   
+  optimizer= write_the_optimizer(model, optim)
+  print("-----------------------------")
+  print("-----------------------------")
+  print("Training...")  
+  # Loop over epochs
+  for epoch in range(max_epochs):
+    model.train()
+    optimizer=optimizer #get the optimizer for the current model
+    for local_batch, local_labels in training_generator:
+        optimizer.zero_grad()
+        local_batch, local_labels = local_batch.to(device), local_labels.to(device)
+        loss = train(local_batch, local_labels, model, loss_function) #get the loss for the current model
+        loss.backward() #backpropagation
+        optimizer.step() #update the weights
+    # Compute and store the errors
+    train_err = error(training_set.data, training_set.labels, model, original_shape)
+    list_train_err.append(train_err)
+    if epoch%10==0:
+      print("epoch: ", epoch)
+      print("train error model: ", train_err)
+    if validation==True:
+        val_err = error(validation_set.data, validation_set.labels, model, original_shape)
+        list_val_err.append(val_err)
+        if epoch%10==0:
+          print("test error model: ", test_err)
+    if test==True:
+        test_err = error(test_set.data, test_set.labels, model, original_shape)
+        list_test_err.append(test_err)
+        if epoch%10==0:
+          print("test error model: ", test_err)
+    #print(" Epoch {} complete".format(epoch))
+  ##################################################################################
+  ##################################################################################
+    
+  #put all the errors in a list
+  errors = [list_train_err]
+  if validation == True :
+    errors.append(list_val_err)
+  if test == True :
+    errors.append(list_test_err)
+  errors_positions = [error_positions(training_set.data, training_set.labels, model, original_shape)]
+  if validation == True : errors_positions.append(error_positions(validation_set.data, validation_set.labels, model, original_shape))
+  if test == True : errors_positions.append(error_positions(test_set.data, test_set.labels, model, original_shape)) 
+  #delete the datasets to free memory
+  del training_set
+  del validation_set
+  del test_set
+  return model, errors, errors_positions
+  
+def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
   
   """
   MSA_file: name of the file containing the preprocessed MSA
@@ -495,11 +552,7 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
       print("No GPU available, using the CPU instead.")
   torch.backends.cudnn.benchmark = True
   print("----------------------------")
-
-
-  #check if the path to the folder exist if not create it
-  if not os.path.exists(path):
-      os.makedirs(path)
+  
 
   ###################################################################################
   ################# LOAD OF THE LEARNING PARAMETERS #################################
@@ -532,11 +585,15 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
   print("model_type: ",model_type)
   n_models=int(arguments.get("n_models"))
   print("n_models: ",n_models)
+  activation=arguments.get("activation")
   nb_hidden_neurons=int(arguments.get("nb_hidden_neurons"))
-  print("nb_hidden_neurons: ",nb_hidden_neurons)
+  if model_type=="non-linear":
+    print("activation: ",activation)
+    print("nb_hidden_neurons: ",nb_hidden_neurons)
   validation=str(arguments.get("Validation"))#is "True" or "False"
-  np.random.seed(int(arguments.get("seed")))
-  torch.manual_seed(int(arguments.get("seed")))
+  number_seed=int(arguments.get("seed"))
+  np.random.seed(number_seed)
+  torch.manual_seed(number_seed)
   #put the type of validation as boolean:
   if validation=="True":
       validation=True
@@ -600,7 +657,14 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
     print(key,": ",optimizer[key])
   ###################################################################################
   ###################################################################################
-
+  if path=="":#default value
+    path_folder=weights_file.split("/")[:-1] #take the path of the input file
+    path_folder="/".join(path_folder)
+    path=path_folder+"model_"+model_type+"-"+str(max_epochs)+"epochs-"+str(batch_size)+"batch_size/seed"+str(number_seed)
+    print("The folder path (where the model(s) and data_per_col.txt will be saved) is: ",path)
+  #check if the path to the folder exist if not create it
+  if not os.path.exists(path):
+    os.makedirs(path)
   ###################################################################################
   ################# LOAD OF THE DATA AND LABELS #####################################
   ################################################################################### 
@@ -616,7 +680,13 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
   ##################################################################################
   
   (_,L,K) = original_shape
-  generate_indices_mask(L, K, data_per_col,path)
+  if model_type=="linear":
+    generate_indices_mask(L, K, data_per_col,path)
+  elif model_type=="non-linear":
+    generate_indices_mask_non_linear(L, K, nb_hidden_neurons,data_per_col,path)
+  else:
+    print("For now only the linear and non linear model are implemented")
+
 
   ########################################################
   ######## initatialisation average model ################
@@ -626,7 +696,12 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
   #The model will be initialized with the right architecture
   #and we will be able to compute the average model
   print("initatialisation average model...") #DONT FORGET TO PUT BACK AFTER
-  average_model = LinearNetwork(path+"/indice_mask.txt", L*K, original_shape)
+  if model_type=="linear":
+    average_model = LinearNetwork(path+"/indice_mask.txt", L*K, original_shape)
+  elif model_type=="non-linear":
+    average_model = NonLinearNetwork(path+"/indice_mask1.txt", path+"/indice_mask2.txt", L*K, L*nb_hidden_neurons, original_shape, activation)
+  else:
+    print("For now only the linear and non linear model are implemented")
   average_model = average_model.to(device)
   average_parameters = {key: torch.zeros_like(value).to(device) for key, value in average_model.state_dict().items()}
   #########################################################
@@ -675,9 +750,17 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
     #look before to compute and save the model if it already exist
     if os.path.exists(model_name):       
       print("model ", model_name, "already exist, we will not overwrite it")
+      #we need to ensure the next models will not be trained on the same data
+      #by removing the data used for the previous model with the specific probability
+      training_set, validation_set, test_set = create_datasets(data, labels, separation) 
+      #remove them from the memory
+      del training_set
+      del validation_set
+      del test_set
+
     else:
       print("-------- model "+str(i)+"--------")
-      model, errors, errors_positions = build_and_train_model(data,labels, original_shape, separation, model_type, max_epochs, batch_size, validation, test, optimizer, device, use_cuda, path)
+      model, errors, errors_positions = build_and_train_model(data,labels, original_shape, separation, model_type,activation, nb_hidden_neurons, max_epochs, batch_size, validation, test, optimizer, device, use_cuda, path)
       torch.save(model, model_name)
       np.savetxt(errors_name, errors)
       np.savetxt(errors_positions_name, errors_positions)
@@ -685,6 +768,12 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
       print("errors saved:", errors_name)
       print("errors_positions saved:", errors_positions_name)  
       del model #don't keep the model in memory
+      del errors
+      del errors_positions
+      
+    gc.collect()
+      
+
   #########################################################
   #########################################################
   
@@ -766,20 +855,20 @@ def execute(MSA_file, weights_file, model_params, path, output_name='/', activat
     elif validation==True and test==False:
         for errors in ALLerrors:
             avg_train+=np.loadtxt(errors)[0][0]
-            avg_val+=np.loadtxt(errors)[0][1]
+            avg_val+=np.loadtxt(errors)[1][0]
         avg_train_errors.append(avg_train)
         avg_validation_errors.append(avg_val)
     elif validation==False and test==True:
         for errors in ALLerrors:
             avg_train+=np.loadtxt(errors)[0][0]
-            avg_test+=np.loadtxt(errors)[0][1]
+            avg_test+=np.loadtxt(errors)[1][0]
         avg_train_errors.append(avg_train)
         avg_test_errors.append(avg_test)
     else: #validation and test are true
         for errors in ALLerrors:
             avg_train+=np.loadtxt(errors)[0][0]
-            avg_val+=np.loadtxt(errors)[0][1]
-            avg_test+=np.loadtxt(errors)[0][2]
+            avg_val+=np.loadtxt(errors)[1][0]
+            avg_test+=np.loadtxt(errors)[2][0]
         avg_train_errors.append(avg_train)
         avg_validation_errors.append(avg_val)
         avg_test_errors.append(avg_test)
