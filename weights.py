@@ -18,14 +18,14 @@ def weights(input_file, output_file="", threshold=0.8) :
     '''
     #load the MSA in the input file
     MSA = np.genfromtxt(input_file, delimiter=',')
-    #write the output_name
-    if output_name == '':
+    #write the output_file
+    if output_file == '':
         path_folder=input_file.split("/")[:-1] #take the path of the input file
         path_folder="/".join(path_folder)
-        output_name=path_folder+"/weights-"+str(threshold)+"gaps/weights-"+str(threshold)+".txt"
-        print("The output file will be saved in  ", output_name)
+        output_file=path_folder+"/weights-"+str(threshold)+"/weights-"+str(threshold)+".txt"
+        print("The output file will be saved in  ", output_file)
     else:
-        path_folder=output_name.split("/")[:-1] #take the path of the input file
+        path_folder=output_file.split("/")[:-1] #take the path of the input file
         path_folder="/".join(path_folder)
     #check if the folder exists and create it if not
     if not os.path.exists(os.path.dirname(output_file)):
