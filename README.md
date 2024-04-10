@@ -217,18 +217,18 @@ folder needed: uniprot-tax
 
 Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
-* output_name : name that will be used to create the output file
+* output_name : name that will be used to create the output file (**Default path<input_name>/preprocessing-<threshold>gaps/preprocessed_<threshold>.csv**)
 * threshold : The threshold for the percentage of gaps in a sequence. (**Default 1.0**)
 
 
 ```shell 
-$  python3 main_preprocessing.py data/PF00226.fasta PF00226/preprocessing-0.1gaps/PF00226_preprocessed-0.1gaps.csv -threshold 0.1
+  python3 main_preprocessing.py data/PF00226.fasta 
 ```
 
-exemple using the default values:
+exemple using not the default values:
 
 ```shell
-$  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta DnaK-with-tax/preprocessing-1.0gaps/preprocessed-1.0gaps
+  python3 main_preprocessing.py data-MP/hsp70-dnak-bacteria.fasta -output_name DnaK-with-tax/preprocessing-1.0gaps/preprocessed -threshold 0.1
 ```
 
 ### Part II: description of the files
