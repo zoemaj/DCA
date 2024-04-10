@@ -3,19 +3,30 @@ import numba
 from numba import jit
 import os
 
-def weights(input_file, output_file, threshold=0.8) :
+def weights(input_file, output_file="", threshold=0.8) :
     '''
     This function write the weights of the different sequences in the MSA 
     input:
         input_file  ->  name of the input file containing the MSA preprocessed
                         string
         threshold   ->  threshold of similarity to consider two sequences as similar (percentage of identical amino acids in the same position in the two sequences)
+                        default=0.8
                         float
         output_file ->  name of the output file
+                        default=path(input_file)+"/weights-(threshold)/weights-(threshold).txt"
                         string
     '''
     #load the MSA in the input file
     MSA = np.genfromtxt(input_file, delimiter=',')
+    #write the output_name
+    if output_name == '':
+        path_folder=input_file.split("/")[:-1] #take the path of the input file
+        path_folder="/".join(path_folder)
+        output_name=path_folder+"/weights-"+str(threshold)+"gaps/weights-"+str(threshold)+".txt"
+        print("The output file will be saved in  ", output_name)
+    else:
+        path_folder=output_name.split("/")[:-1] #take the path of the input file
+        path_folder="/".join(path_folder)
     #check if the folder exists and create it if not
     if not os.path.exists(os.path.dirname(output_file)):
         #create it
