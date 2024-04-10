@@ -66,18 +66,19 @@ def find_the_tax(file_name):
 
 
 
-def preprocessing(input_name, output_name, threshold=1.0) :
+def preprocessing(input_name, output_name='', threshold=1.0) :
     """
-    load the sequences from the input file, remove inserts, remove sequences with more than 10% gaps, encode the MSA into numbers
-    and write the preprocessed MSA in the output_file
+    input_name: name of the file containing the MSA in fasta format or csv
+    output_name: name for the output file, default is the same path than the input file with the name preprocessing-(threshold)gaps/preprocessed-(threshold)gaps.csv
+    threshold: the threshold for the percentage of gaps in a sequence, default is 1.0
+    """
+    if output_name == '':
+        path_folder=input_name.split("/")[:-1] #take the path of the input file
+        path_folder="/".join(path_folder)
+        output_name=path_folder+"/preprocessing-"+str(threshold)+"gaps/preprocessed-1.0gaps.csv"
+        print("The output file will be saved in the folder ", output_name)
 
-    :param input_name: name of the input file containing the sequences in fasta format
-    :type input_name: string for the csv file
-    :param output_name: name of the output file which will contain the preprocessed MSA in csv format
-    :type output_name: string
-    :return: nothing
-    :rtype: None
-    """
+    K=21
     #load the sequences
     if input_name.endswith('.fasta'):
         MSA = list(SeqIO.parse(input_name, "fasta"))
@@ -92,12 +93,14 @@ def preprocessing(input_name, output_name, threshold=1.0) :
         while A!='yes' and A!='no':
             A=input("Please write yes or no ")
         if A=='no':
+            infos_name=path_folder+"/INFOS_no_tax.txt"
             print(" You will need to take K=21 in the model parameters file")
             MSA = filter_data(MSA,'fasta',float(threshold),tax=False)
             print("number sequences after filtering:", len(MSA))
             print("------- encode the MSA into numbers --------")
             MSA=amino_acids_to_numbers(MSA, type_file='fasta',tax=False)
         if A=='yes':
+            infos_name=path_folder+"/INFOS_with_tax.txt"
             number=input("How man different proteins type do you have in the MSA? For example if it is the homologous of two proteins together write 2.")
             number=int(number)
             list_file_prot=input("Please can you write on which protein are you working (BiP, DnaK,..)? separated by a comma and no space. ")
@@ -155,8 +158,8 @@ def preprocessing(input_name, output_name, threshold=1.0) :
             #find the number of different tax (last term of each sequence)
             big_unique_tax = set([value.split(',')[1] for value in MSA])
             print("unique_tax: ", big_unique_tax)
-            K=21
-            print("You will need to take K=", len(big_unique_tax)+K, " in the model parameters file")
+            K=len(big_unique_tax)+K
+            print("You will need to take K=", K, " in the model parameters file")
             #save an histogram of the different tax in the MSA
             plt.hist([value.split(',')[1] for value in MSA], bins=len(big_unique_tax))
             plt.title('Histogram of the different tax in the MSA')
@@ -187,12 +190,14 @@ def preprocessing(input_name, output_name, threshold=1.0) :
         MSA = filter_data(MSA, 'csv', float(threshold))
         print("number sequences after filtering:", len(MSA))
         if tax=='no':
+            infos_name=path_folder+"/INFOS_no_tax.txt"
             print("------- encode the MSA into numbers --------")
             print(" You will need to take K=21 in the model parameters file")
             MSA=amino_acids_to_numbers(MSA, type_file='csv',tax=False)
             print("MSA shape: ", MSA.shape)
         
         if tax=='yes':
+            infos_name=path_folder+"/INFOS_with_tax.txt"
             print("------- encode the different class into numbers --------")
             print(" 8 different classes: \n "
                 "For eukaryotes: \n "
@@ -227,6 +232,43 @@ def preprocessing(input_name, output_name, threshold=1.0) :
     if not os.path.exists(os.path.dirname(output_name)):
         #create it
         os.makedirs(os.path.dirname(output_name))
+
+    #save the (N,L,K) to use it in the model
+    #two types of files: with tax and without tax
+    
+    if os.path.exists(infos_name):
+        #look if there is a line writted f"preprocessing with gap threshold of {threshold} %" 
+        #if it is the case, remove it and the line after also
+        #adapt the file to the new informations
+        lines=[]
+        with open(infos_name, "r") as file:
+            lines = file.readlines()
+            for i, line in enumerate(lines):
+                if line==f"preprocessing with gap threshold of {threshold*100} %\n":
+                    print("The line is already in the file")
+                    lines.pop(i) #remove the line
+                    #if the next line is not ""
+                    if lines[i]!="----------------------------------------------------------------\n":
+                        lines.pop(i) #remove the next line
+                        lines.pop(i)
+                    break
+
+        with open(infos_name, "w") as file:
+            file.writelines(lines)
+
+        
+
+        
+    #write the new informations without removing the previous ones
+    with open(infos_name, "a") as file: #"a" for append
+        file.write(f"preprocessing with gap threshold of {threshold*100} %\n")
+        file.write(f"(N,L,K) = ({MSA.shape[0]},{MSA.shape[1]},{K})\n")
+        file.write("----------------------------------------------------------------\n")
+    print("(N,L,K) are saved in the file ", infos_name)
+    print("Please don't remove this file since the informations are used in the model :)")
+
+        
+                    
     MSA.to_csv(output_name, header=None, index=None)
 
 def filter_data(MSA,type_file,threshold=1.0,tax=False) :
