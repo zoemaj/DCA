@@ -76,7 +76,11 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
         path_folder=input_name.split("/")[:-1] #take the path of the input file
         path_folder="/".join(path_folder)
         output_name=path_folder+"/preprocessing-"+str(threshold)+"gaps/preprocessed-"+str(threshold)+"gaps.csv"
-        print("The output file will be saved in  ", output_name)
+        good_output_name=input(f"Do you want to save the output file will in  {output_name} ? (yes/no) ")
+        while good_output_name!='yes' and good_output_name!='no':
+            good_output_name=input("Please write yes or no ")
+        if good_output_name=='no':
+            output_name=input("Please write the path for the output file ")
     else:
         path_folder=output_name.split("/")[:-1] #take the path of the input file
         path_folder="/".join(path_folder)
@@ -276,7 +280,7 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
         file.write(f"(N,L,K) = ({MSA.shape[0]},{MSA.shape[1]},{K})\n")
         file.write("----------------------------------------------------------------\n")
     print("(N,L,K) are saved in the file ", infos_name)
-    print("Please don't remove this file since the informations are used in the model :)")
+    print("Please don't remove this file since the informations are used in the couplings :)")
 
         
                     
