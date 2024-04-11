@@ -406,7 +406,7 @@ def average_product_correction(f) :
     return f
     
 
-def couplings(model_name, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear") :
+def couplings(model_name, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear",L=0,K=0) :
 
     ###################################################################################
     ################# EXTRACTION OF THE MODEL(S) ######################################
@@ -437,50 +437,70 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
         data_per_col = os.path.join(data_per_col, 'data_per_col.txt')
         print("take the default data_per_col file: ", data_per_col)
     data_per_col=np.loadtxt(data_per_col)
-    K=data_per_col.shape[0]
-    ###################################################################################
-    ###################################################################################
-    try:
-        threshold_preprocessed=model_name.split('/')[1].split('-')[-1]
-        #check if endswith "gaps"
-        if threshold_preprocessed.endswith("gaps"):
-            threshold_preprocessed=threshold_preprocessed[:-4] #remove the "gaps" at the end
-        
-    except:
-        pass
-    try:
-        #check that threshold_preprocessed is composed of digits and a dot
-        float(threshold_preprocessed)
-    except:
-        threshold_preprocessed=input("Please enter the threshold preprocessed used")
-    if K==21:
-        name_info='INFOS_no_tax.txt'
-    elif K>21:
-        name_info='INFOS_tax.txt'
-    else:
-        print("The data_per_col has a wrong shape, please check it (K should be >=21)")
+    if K==0:
+        print("data_per_col.shape:",data_per_col.shape)
+        K=data_per_col.shape[0]
+        if K>21:
+            name_info='INFOS_with_tax.txt'
+        else:
+            name_info='INFOS_no_tax.txt'
+    elif K!=data_per_col.shape[0]:
+        print("The data_per_col has a wrong shape, please check it (K should be",data_per_col.shape[0],")")
         return
-    
-    #we don't know if it is with tax or not
-    with open(os.path.join(path_folder, name_info), 'r') as file:
-        lines = file.readlines()
-        for i, line in enumerate(lines):
-            if line==f"preprocessing with gap threshold of {threshold_preprocessed*100} %\n":
-                L=line[i+1].split(',')[3]
-                K_good=line[i+1].split(',')[4]
-                if K_good!=K:
-                    print(f"The data_per_col has a wrong shape, please check it (K should be {K_good})")
-                    return
-                break
+    ###################################################################################
+    ###################################################################################
+    if L==0:
+        
+        try:
+            #find the element in model_name.split('/') starting with prep:
+            threshold_preprocessed=[x for x in model_name.split('/') if x.startswith('preprocessing')][0]
+            threshold_preprocessed=threshold_preprocessed.split('-')[-1]
+            path_info=model_name.split('/preprocessing')[0]
+            #convert the list into path
+            path_info=os.path.join(path_info, name_info)
+            
+            #check if endswith "gaps"
+            if threshold_preprocessed.endswith("gaps"):
+                threshold_preprocessed=threshold_preprocessed[:-4] #remove the "gaps" at the end
+
+        except:
+            pass
+        try:
+            #check that threshold_preprocessed is composed of digits and a dot
+            
+            threshold_preprocessed=float(threshold_preprocessed)
+            
+        except:
+            threshold_preprocessed=input("Please enter the threshold preprocessed used")
+            path_info=input("Please enter the path where to find the file with the information about N,L,K")
+
+        
+        
+        #we don't know if it is with tax or not
+        with open(os.path.join(path_info), 'r') as file:
+            print("in the file:", path_info)
+            lines = file.readlines()
+            print(f"preprocessing with gap threshold of {threshold_preprocessed*100} %")
+            for i, line in enumerate(lines):
+                
+                if line==f"preprocessing with gap threshold of {threshold_preprocessed*100} %\n":
+                    L=lines[i+1].split(',')[3]
+                    L=int(L)
+                    K_good=lines[i+1].split(',')[4]
+                    K_good=K_good.split(')')[0]
+                    K_good=int(K_good)
+                    if K_good!=K:
+                        print(f"The data_per_col has a wrong shape, please check it (K should be {K_good})")
+                        return
+                    break
 
     ###################################################################################
     
 
     print("L,K:(",L,",",K,")")
     if K>21:
-        print("K=",K,"-> we have the taxonomy for each sequence. In this case the L that you have given is the length of a sequence +1.")
+        print("K=",K,"-> we have the taxonomy for each sequence. In this case the L is the length of a sequence +1.")
         
-    
     
     if output_name=="/":
         #take the path of the model_name and add the name 'couplings' to it
@@ -533,25 +553,27 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
             average_couplings=np.zeros((L*K,L*K))
         for step,model in enumerate(models):
             if step in couplings_ising_to_do:
-                print("extraction of the couplings for the model: ", step, "/", number_model)
+                print("extraction of the couplings for the model: ", step+1, "/", number_model)
                 couplings=extract_couplings(model, model_type, (L,K),data_per_col,output_name)
                 if K>21:
                     #with tax we need to remove the last blocs of size K
                     print("treatment of couplings: remove the last column corresponding to the taxonomy type")
                     couplings=couplings[:-K,:-K]
                 #save the couplings in the file couplings_before_ising.txt
-                np.savetxt(os.path.join(name_couplings_before, "couplings_"+str(len(ALL_couplings))+"_before_ising.txt"), couplings)
-                print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_"+str(len(ALL_couplings))+"_before_ising.txt"))
+                np.savetxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"), couplings)
+                print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
                 ALL_couplings.append(couplings)
                 average_couplings += couplings
             else:
                 name_coup=os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt")
+                ALL_couplings.append(np.loadtxt(name_coup))
                 average_couplings += np.loadtxt(name_coup)
 
         if K>21:
             L=L-1 #lose a dimension with class
             data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
         average_couplings=average_couplings/number_model
+        name_couplings_before=os.path.join(name_couplings_before, "couplings_0"+str(number_model-1)+"_before_ising.txt")
         np.savetxt(name_couplings_before, average_couplings)
         print("couplings before ising gauge saved in the file: ", np.loadtxt(name_coup))
     

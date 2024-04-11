@@ -1,5 +1,5 @@
 import argparse
-import couplings_NEW as couplings
+import couplings
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
@@ -11,6 +11,8 @@ if __name__=="__main__":
     parser.add_argument("-figure", help="Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. by default: False", default=False, action="store_true")
     parser.add_argument("-data_per_col", help="number of possible a.a per column in the MSA (only for couplings_version3). Default=path(model_name)/data_per_col.txt", default="/", type=str)
     parser.add_argument("-model_type", help="type of the model, can be 'linear', 'non-linear' or 'mix'", default="linear", type=str)
+    parser.add_argument("-L", help="length of the sequence, if we have not the INFOS file", default=0, type=int)
+    parser.add_argument("-K", help="value of K, if we have not the INFOS file", default=0, type=int)
     args=parser.parse_args()
     
-    couplings.couplings(args.model_name, args.number_models, args.type_average, args.output_name, args.figure, args.data_per_col, args.model_type)
+    couplings.couplings(args.model_name, args.number_models, args.type_average, args.output_name, args.figure, args.data_per_col, args.model_type, args.L, args.K)
