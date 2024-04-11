@@ -575,7 +575,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
         average_couplings=average_couplings/number_model
         name_couplings_before=os.path.join(name_couplings_before, "couplings_0"+str(number_model-1)+"_before_ising.txt")
         np.savetxt(name_couplings_before, average_couplings)
-        print("couplings before ising gauge saved in the file: ", np.loadtxt(name_coup))
+        print("average couplings before ising gauge saved in the file: ", np.loadtxt(name_couplings_before))
     
     ###################################################################################
     ###################################################################################
