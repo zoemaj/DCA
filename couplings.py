@@ -518,10 +518,11 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
     name_couplings_before = os.path.join(couplings_path, 'couplings_before_ising/')
     ALL_couplings=[]
     #check if the couplings after ising already exist
-    name_to_check= os.path.join(couplings_path, "couplings_with_ising_models/couplings_after_ising_0-"+str(number_model-1)+".txt")
+    name_to_check= os.path.join(couplings_path, "couplings_after_ising/couplings_after_ising_0-"+str(number_model-1)+".txt")
     if os.path.isfile(name_to_check):   
         print("couplings_after_ising already exists, we don't compute it again")
         average_couplings=np.loadtxt(name_to_check)
+        couplings_path=os.path.join(couplings_path, "couplings_after_ising")
     else:
         #check if it exist
         find_average_couplings=False
@@ -632,7 +633,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
                 # Path for the couplings directory without the last part of the output_name (to stock in the folder)
                 couplings_path = os.path.dirname(output_name)
                 #add the name 'couplings_models' to the couplings_path
-                couplings_path = os.path.join(couplings_path, 'couplings_with_ising_models/')
+                couplings_path = os.path.join(couplings_path, 'couplings_after_ising/')
                 # Create the directory and its parent directories if they don't exist
                 os.makedirs(couplings_path, exist_ok=True)
                 
@@ -645,14 +646,14 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
                     #look if the file with path couplings_path and name couplings_ising_step.txt exists
                     #if it exists, load it and don't do ising_gauge again
                     #if it doesn't exist, do ising_gauge and save it
-                    if os.path.isfile(os.path.join(couplings_path, "couplings_ising_" + str(step) + ".txt")):
-                        print("couplings_ising_" + str(step) + ".txt already exists, we don't compute it again")
-                        couplings = np.loadtxt(os.path.join(couplings_path, "couplings_ising_" + str(step) + ".txt"))
+                    if os.path.isfile(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt")):
+                        print("couplings_after_ising_" + str(step) + ".txt already exists, we don't compute it again")
+                        couplings = np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
                     else:
                         couplings=np.loadtxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
                         couplings = ising_gauge(couplings, (L,K), data_per_col)
-                        np.savetxt(os.path.join(couplings_path, "couplings_ising_" + str(step) + ".txt"), couplings)
-                        print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_ising_" + str(step) + ".txt"))
+                        np.savetxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"), couplings)
+                        print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
                     #ALL_couplings_ising.append(couplings)
                     average_couplings += couplings
                     del couplings
@@ -745,7 +746,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
         if number_model>1 and type_average=="average_couplings_frob":
             print("Treatment of the average product correction on the couplings...")
             for step in range(number_model):
-                couplings_old=np.loadtxt(os.path.join(couplings_path, "couplings_with_ising_models/couplings_ising_"+str(step)+".txt"))
+                couplings_old=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_"+str(step)+".txt"))
                 couplings=0.5*(couplings_old + couplings_old.T)
                 
             #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
@@ -778,7 +779,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
             average_couplings = average_couplings/number_model
         else: #average couplings or for number_model=1
             print("Treatment of the average product correction on the average couplings...")
-            average_couplings=np.loadtxt(os.path.join(couplings_path, "couplings_with_ising_models/couplings_after_ising_0-"+str(number_model-1)+".txt"))
+            average_couplings=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
             average_couplings+=0.5*(average_couplings + average_couplings.T)
             #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
             matrix = []
@@ -806,9 +807,9 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
         
         os.makedirs(output_directory, exist_ok=True) # Create the directory and its parent directories if they don't exist
         #print the path of: os.path.join(output_directory, output_name)
-        
-        np.savetxt(os.path.join(output_directory,  output_name,"_0-"+str(number_model-1)), average_couplings)
-        print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name,"_0-"+str(number_model-1)+".txt"))
+        output_name=output_name+"_0-"+str(number_model-1)+".txt"
+        np.savetxt(os.path.join(output_directory,  output_name), average_couplings)
+        print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
         print("---------------------------------- END -----------------------------------")
         print("--------------------------------------------------------------------------")
         #################################################################################
