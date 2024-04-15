@@ -26,13 +26,20 @@ def find_the_tax(file_name):
                 last_name=diff_tax[-1].split("\n")[0]
                 diff_tax_new=diff_tax[:-1]
                 diff_tax_new.append(last_name)
-                print("The different tax are: ", diff_tax_new[1:]) #remove the print of the node
+                start_id=2 #remove the print of the node and organism_name
+                if "OLN" in diff_tax_new:
+                    start_id=3
+                if "ORF" in diff_tax_new:
+                    start_id=4
+                if "Strain" in diff_tax_new:
+                    start_id=5
+                print("The different tax are: ", diff_tax_new[start_id:]) #remove the print of the node
                 R2=input("Which tax do you want to use?")
                 while R2 not in diff_tax_new:
                     R2=input("Please write a valid tax present in the list ", diff_tax_new, ": ")
                 #create a dictionary with the node and the division or the kingdom
                 E_dic = {}
-                for line in lines[1:]:
+                for line in lines[start_id:]:
                     list_tax = line.split(", ")
                     node = list_tax[0]
                     tax = list_tax[diff_tax_new.index(R2)]

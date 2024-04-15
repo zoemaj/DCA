@@ -526,7 +526,7 @@ def build_and_train_model(data,labels, original_shape, separation, model_type,ac
   del test_set
   return model, errors, errors_positions
   
-def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
+def execute(MSA_file, weights_file, model_params, path="", output_name='/',errors_computation=False) :
   
   """
   MSA_file: name of the file containing the preprocessed MSA
@@ -660,7 +660,7 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
   if path=="":#default value
     path_folder=weights_file.split("/")[:-1] #take the path of the input file
     path_folder="/".join(path_folder)
-    path=path_folder+"model_"+model_type+"-"+str(max_epochs)+"epochs-"+str(batch_size)+"batch_size/seed"+str(number_seed)
+    path=path_folder+"/model_"+model_type+"-"+str(max_epochs)+"epochs-"+str(batch_size)+"batch_size/seed"+str(number_seed)
     print("The folder path (where the model(s) and data_per_col.txt will be saved) is: ",path)
   #check if the path to the folder exist if not create it
   if not os.path.exists(path):
@@ -762,8 +762,9 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
       print("-------- model "+str(i)+"--------")
       model, errors, errors_positions = build_and_train_model(data,labels, original_shape, separation, model_type,activation, nb_hidden_neurons, max_epochs, batch_size, validation, test, optimizer, device, use_cuda, path)
       torch.save(model, model_name)
-      np.savetxt(errors_name, errors)
-      np.savetxt(errors_positions_name, errors_positions)
+      if errors_computation==True:
+        np.savetxt(errors_name, errors)
+        np.savetxt(errors_positions_name, errors_positions)
       print("model saved:", model_name)
       print("errors saved:", errors_name)
       print("errors_positions saved:", errors_positions_name)  
@@ -800,37 +801,128 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
     #print("the dtype of errors is ",np.loadtxt(ALLerrors[0]).dtype)
     #print("the shape of errors is ",np.loadtxt(ALLerrors[0]).shape)
     #print("the shape of ALLerrors is ",np.array(ALLerrors).shape)
+    if errors_computation==True:
+      for i in range(max_epochs):
+          avg_train=0
+          avg_test=0
+          avg_val=0
+          comptage=0
+          if validation==False and test==False: #errors[i] is composed of only one list
+              for errors in ALLerrors:
+                  avg_train+=np.loadtxt(errors)[i]
+              avg_train_errors.append(avg_train/n_models)
+          elif validation==True and test==False: #errors[i] is composed of two lists
+              for errors in ALLerrors:
+                  avg_train+=np.loadtxt(errors)[0][i]
+                  avg_val+=np.loadtxt(errors)[1][i]
+              avg_train_errors.append(avg_train/n_models)
+              avg_validation_errors.append(avg_val/n_models)
+          elif validation==False and test==True:
+              for errors in ALLerrors:
+                  avg_train+=np.loadtxt(errors)[0][i]
+                  avg_test+=np.loadtxt(errors)[1][i]
+              avg_train_errors.append(avg_train/n_models)
+              avg_test_errors.append(avg_test/n_models)           
+              
+          else: #validation and test are true
+              for errors in ALLerrors:
+                  avg_train+=np.loadtxt(errors)[0][i]
+                  avg_val+=np.loadtxt(errors)[1][i]
+                  avg_test+=np.loadtxt(errors)[2][i]
+              avg_train_errors.append(avg_train/n_models)
+              avg_validation_errors.append(avg_val/n_models)
+              avg_test_errors.append(avg_test/n_models)
+      print("-------- plot the curve --------")
+      #plot learning curve
+      plt.plot(range(len(avg_train_errors)), avg_train_errors, label="train error")
+      plt.plot(range(len(avg_test_errors)), avg_test_errors, label="test error")
+      plt.ylabel("categorical error")
+      plt.xlabel("epoch")
+      plt.legend()
+      plt.grid()
+      #save the plot in the folder
+      plt.savefig(path+"/learning_curve.png")
+      print("-------- end --------")
+    else:
+      print("only one model, the average model is the model")
+      average_model=torch.load(ALLmodel[0])
+      avg_train=0
+      avg_test=0
+      avg_val=0
+      if validation==False and test==False:
+          for errors in ALLerrors:
+              avg_train+=np.loadtxt(errors)[0]
+          avg_train_errors.append(avg_train)
+      elif validation==True and test==False:
+          for errors in ALLerrors:
+              avg_train+=np.loadtxt(errors)[0][0]
+              avg_val+=np.loadtxt(errors)[1][0]
+          avg_train_errors.append(avg_train)
+          avg_validation_errors.append(avg_val)
+      elif validation==False and test==True:
+          for errors in ALLerrors:
+              avg_train+=np.loadtxt(errors)[0][0]
+              avg_test+=np.loadtxt(errors)[1][0]
+          avg_train_errors.append(avg_train)
+          avg_test_errors.append(avg_test)
+      else: #validation and test are true
+          for errors in ALLerrors:
+              avg_train+=np.loadtxt(errors)[0][0]
+              avg_val+=np.loadtxt(errors)[1][0]
+              avg_test+=np.loadtxt(errors)[2][0]
+          avg_train_errors.append(avg_train)
+          avg_validation_errors.append(avg_val)
+          avg_test_errors.append(avg_test)
+  
+  
+    #put the errors in a list
+    #avg_train_errors_list = [list(errors) for errors in avg_train_errors]
+    #print it
+    print("avg_train_errors_list: ",avg_train_errors)
+    #avg_train_errors_positions_list = [list(errors) for errors in avg_train_errors_positions]
+    avg_errors = [avg_train_errors]
+    #avg_errors_positions = [avg_train_errors_positions_list]
+    if validation == True :
+      avg_validation_errors_list = [list(errors) for errors in avg_validation_errors]
+      #avg_validation_errors_positions_list = [list(errors) for errors in avg_validation_errors_positions]
+      avg_errors.append(avg_validation_errors_list)
+      #avg_errors_positions.append(avg_validation_errors_positions_list)
+    if test == True :
+      #avg_test_errors_list = [list(errors) for errors in avg_test_errors]
+      #avg_test_errors_positions_list = [list(errors) for errors in avg_test_errors_positions]
+      avg_errors.append(avg_test_errors)
+      #avg_errors_positions.append(avg_test_errors_positions_list)
+  
+  
+  #save the average model
+  if output_name=="/":
+    model_name = path+"/model_" + "average_0-" + str(n_models-1) 
+    if errors_computation==True:
+      avg_errors_name = path +"/errors_0-" + str(n_models-1) + ".txt"
+      #avg_errors_positions_name = path+ "/errors_positions_0-" + str(n_models-1) + ".txt"
+  else:
+    model_name = path+ "/model_" + output_name + "average_0-" + str(n_models-1)
+    if errors_computation==True:
+      avg_errors_name = path +"/errors_" + output_name + "_0-" + str(n_models-1) + ".txt"
+      #avg_errors_positions_name = path+ "/errors_positions_" + output_name + "_0-" + str(n_models-1) + ".txt"
+  if os.path.exists(model_name):       
+    print("model ", model_name, "already exist, we will not overwrite it")
+  else:
+    torch.save(average_model, model_name)
+    print("average model saved:", model_name)
+    if errors_computation==True:
+      np.savetxt(errors_name, avg_errors)
+      #np.savetxt(errors_positions_name, avg_errors_positions)
+      
+      print("average errors saved:", avg_errors_name)
+    #print("average errors_positions saved:", avg_errors_positions_name)
 
-    for i in range(max_epochs):
-        avg_train=0
-        avg_test=0
-        avg_val=0
-        comptage=0
-        if validation==False and test==False: #errors[i] is composed of only one list
-            for errors in ALLerrors:
-                avg_train+=np.loadtxt(errors)[i]
-            avg_train_errors.append(avg_train/n_models)
-        elif validation==True and test==False: #errors[i] is composed of two lists
-            for errors in ALLerrors:
-                avg_train+=np.loadtxt(errors)[0][i]
-                avg_val+=np.loadtxt(errors)[1][i]
-            avg_train_errors.append(avg_train/n_models)
-            avg_validation_errors.append(avg_val/n_models)
-        elif validation==False and test==True:
-            for errors in ALLerrors:
-                avg_train+=np.loadtxt(errors)[0][i]
-                avg_test+=np.loadtxt(errors)[1][i]
-            avg_train_errors.append(avg_train/n_models)
-            avg_test_errors.append(avg_test/n_models)           
-            
-        else: #validation and test are true
-            for errors in ALLerrors:
-                avg_train+=np.loadtxt(errors)[0][i]
-                avg_val+=np.loadtxt(errors)[1][i]
-                avg_test+=np.loadtxt(errors)[2][i]
-            avg_train_errors.append(avg_train/n_models)
-            avg_validation_errors.append(avg_val/n_models)
-            avg_test_errors.append(avg_test/n_models)
+  ##########################################################################
+  ##########################################################################
+##################################################################################
+##################################################################################
+  if errors_computation==True:
+    ##################################################################################
     print("-------- plot the curve --------")
     #plot learning curve
     plt.plot(range(len(avg_train_errors)), avg_train_errors, label="train error")
@@ -842,91 +934,5 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/') :
     #save the plot in the folder
     plt.savefig(path+"/learning_curve.png")
     print("-------- end --------")
-  else:
-    print("only one model, the average model is the model")
-    average_model=torch.load(ALLmodel[0])
-    avg_train=0
-    avg_test=0
-    avg_val=0
-    if validation==False and test==False:
-        for errors in ALLerrors:
-            avg_train+=np.loadtxt(errors)[0]
-        avg_train_errors.append(avg_train)
-    elif validation==True and test==False:
-        for errors in ALLerrors:
-            avg_train+=np.loadtxt(errors)[0][0]
-            avg_val+=np.loadtxt(errors)[1][0]
-        avg_train_errors.append(avg_train)
-        avg_validation_errors.append(avg_val)
-    elif validation==False and test==True:
-        for errors in ALLerrors:
-            avg_train+=np.loadtxt(errors)[0][0]
-            avg_test+=np.loadtxt(errors)[1][0]
-        avg_train_errors.append(avg_train)
-        avg_test_errors.append(avg_test)
-    else: #validation and test are true
-        for errors in ALLerrors:
-            avg_train+=np.loadtxt(errors)[0][0]
-            avg_val+=np.loadtxt(errors)[1][0]
-            avg_test+=np.loadtxt(errors)[2][0]
-        avg_train_errors.append(avg_train)
-        avg_validation_errors.append(avg_val)
-        avg_test_errors.append(avg_test)
-  
-  
-  #put the errors in a list
-  #avg_train_errors_list = [list(errors) for errors in avg_train_errors]
-  #print it
-  print("avg_train_errors_list: ",avg_train_errors)
-  #avg_train_errors_positions_list = [list(errors) for errors in avg_train_errors_positions]
-  avg_errors = [avg_train_errors]
-  #avg_errors_positions = [avg_train_errors_positions_list]
-  if validation == True :
-    avg_validation_errors_list = [list(errors) for errors in avg_validation_errors]
-    #avg_validation_errors_positions_list = [list(errors) for errors in avg_validation_errors_positions]
-    avg_errors.append(avg_validation_errors_list)
-    #avg_errors_positions.append(avg_validation_errors_positions_list)
-  if test == True :
-    #avg_test_errors_list = [list(errors) for errors in avg_test_errors]
-    #avg_test_errors_positions_list = [list(errors) for errors in avg_test_errors_positions]
-    avg_errors.append(avg_test_errors)
-    #avg_errors_positions.append(avg_test_errors_positions_list)
-  
-  
-  #save the average model
-  if output_name=="/":
-    model_name = path+"/model_" + "average_0-" + str(n_models-1) 
-    avg_errors_name = path +"/errors_0-" + str(n_models-1) + ".txt"
-    #avg_errors_positions_name = path+ "/errors_positions_0-" + str(n_models-1) + ".txt"
-  else:
-    model_name = path+ "/model_" + output_name + "average_0-" + str(n_models-1)
-    avg_errors_name = path +"/errors_" + output_name + "_0-" + str(n_models-1) + ".txt"
-    #avg_errors_positions_name = path+ "/errors_positions_" + output_name + "_0-" + str(n_models-1) + ".txt"
-  if os.path.exists(model_name):       
-    print("model ", model_name, "already exist, we will not overwrite it")
-  else:
-    torch.save(average_model, model_name)
-    np.savetxt(errors_name, avg_errors)
-    #np.savetxt(errors_positions_name, avg_errors_positions)
-    print("average model saved:", model_name)
-    print("average errors saved:", avg_errors_name)
-    #print("average errors_positions saved:", avg_errors_positions_name)
-
-  ##########################################################################
-  ##########################################################################
-##################################################################################
-##################################################################################
-        
-  print("-------- plot the curve --------")
-  #plot learning curve
-  plt.plot(range(len(avg_train_errors)), avg_train_errors, label="train error")
-  plt.plot(range(len(avg_test_errors)), avg_test_errors, label="test error")
-  plt.ylabel("categorical error")
-  plt.xlabel("epoch")
-  plt.legend()
-  plt.grid()
-  #save the plot in the folder
-  plt.savefig(path+"/learning_curve.png")
-  print("-------- end --------")
-  ##################################################################################
-  ##################################################################################
+    ##################################################################################
+    ##################################################################################
