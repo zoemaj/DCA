@@ -318,6 +318,7 @@ the matrix of couplings symetrical by averaging with its transpose, takes the Fr
 
 Arguments needed by the main :
 * model_name : name of the file containing the saved model from model.py. For number_models=1 write the path of the model, for number_models>1 write the path of the model without the numbers. As instance if you have model_test_1, model_test_2 you juste need to write model_test
+* length_prot1 : If the fasta file is composed of pairs of proteins A and B, and you want to learn to find A with only B (and vice versa), you can specify the length of the first protein. **Default=0**
 * number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. **Default=1**
 * type average : if number_models=1 this is neglected. Otherwise it specifies the kind of average 
     ("average_couplings" or "average_couplings_frob"). **Default='average_couplings'**
@@ -325,6 +326,8 @@ Arguments needed by the main :
 * figure : Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. **Default: False**
 * data_per_col : path for data_per_col.txt representing the number of possible a.a per column in the MSA (created during model.py) (Default: in the same place than the model(s))
 * model_type : type of the model, can be "linear", "non-linear" or "mix". **Default: linear**
+* L : length of the sequence, if we have not the INFOS file. **Default=0**
+* K : value of K, if we have not the INFOS file **Default=0**
 
 Example of usage :
 
