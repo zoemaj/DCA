@@ -23,6 +23,8 @@ If you want to test some functions with a short set of sequences please go direc
 -----------------------------------------------------------
 The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to **predict the type of a residue given all other residues** in a sequence and then to **extract the knowledge learned by the network to do contact prediction**.
 
+! [Image Alt text](images/image1.png)
+
 ## What about chaperons?
 -----------------------------------------------------------
 Misfolded proteins can lead to aggregation, resulting in neuromuscular and neurodegenerative diseases, or lysosomal dysfunction. **Heat shock proteins 70 (HSP70)** play a crucial role as chaperones in various protein folding processes, involving **ATP hydrolysis facilitated by the J-domain binding to HSP70**. 
