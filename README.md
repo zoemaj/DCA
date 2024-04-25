@@ -168,6 +168,8 @@ Before to use this module you need to download a tsv or xls of your homologous p
 
 This module will read your file and create a csv file (in the folder uniprot-tax) containing each organism ID with specific attributes of the taxonomic lineage determined by the user during inputs. This will also create summary txt files, for each attribute, giving the unique elements and number of occurences.
 
+If your file contain the columns 'Gene Names (ordered locus)' and 'Gene Names (ORF)', they will be extracted. (usefull for pairing two types of bacteria proteins)
+
 Arguments needed by the main :
 * path_file : The path where to find the list from uniprot.
   
@@ -179,12 +181,16 @@ Arguments needed by the main :
  
 The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)? If you want to use the taxonomy, you absolutly need to create the appropriate file with write_list.py
 
+You can specify the maximum percentage of gaps that you authorise. You can also specify the minimum/maximum of similarity between the sequences and the first one that you authorised. Every sequences with more than this percentage, or with too few or too many similarity, are deleted. Limiting the similiraty percentage can be usefull if you don't want sequences too different with your reference sequence per exemple. 
+
 folder needed: uniprot-tax
 
 Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
 * output_name : name that will be used to create the output file (**Default path<input_name>/preprocessing-<threshold>gaps/preprocessed_<threshold>.csv**)
-* threshold : The threshold for the percentage of gaps in a sequence. (**Default 1.0**)
+* threshold : The threshold for the percentage of gaps in a sequence authorised. (**Default 1.0**)
+* min_sim : The minimum similarity authorised between the sequences and the first one. (**Default=0.0**)
+* max_sim : The maximum similarity authorised between the sequences and the first one. (**Default=1.0**)
 
 
 ```shell 
@@ -194,7 +200,7 @@ Arguments needed by the main :
 exemple using not the default values:
 
 ```shell
-  python3 main_preprocessing.py DnaK/DnaK.fasta -output_name DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.1
+  python3 main_preprocessing.py DnaK/DnaK.fasta -output_name DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.1 -min_sim 0.4 -max_sim 0.6
 ```
 
 ### Part II: description of the files
