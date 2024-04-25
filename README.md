@@ -106,7 +106,7 @@ In this part you will:
 
 (Additionally, we can run the contact map with **dcaTools/plotTopContacts**)
 
-Each of them is accompanied by **a main file** that can be directly executed from command line: python3 main_<name>.py <parameter1> <parameter2> ...
+Each of them is accompanied by **a main file** that can be directly executed from command line: python3 main_NAME.py PARAMETER1 PARAMETER2 ...
 
 ### Part I: description of the files
 -----------------------------------------------------------
@@ -187,7 +187,7 @@ folder needed: uniprot-tax
 
 Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
-* output_name : name that will be used to create the output file (**Default path/<input_name>/preprocessing-<threshold/>gaps/preprocessed_<threshold>.csv**)
+* output_name : name that will be used to create the output file (**Default path/input_name/preprocessing-Tgaps/preprocessed_T.csv with T the threshold chosen**) 
 * threshold : The threshold for the percentage of gaps in a sequence authorised. (**Default 1.0**)
 * min_sim : The minimum similarity authorised between the sequences and the first one. (**Default=0.0**)
 * max_sim : The maximum similarity authorised between the sequences and the first one. (**Default=1.0**)
@@ -207,15 +207,15 @@ If you apply this function, you will notice that several files can be created:
 
 -> If you don't use taxonomy: INFOS_no_tax.txt will be created, indicating every (N,L,K) for every type of threshold preprocessing that you used.
 
--> If you use taxonomy: INFOS_with_tax.txt will be created, indicating every (N,L,K) for every type of threshold preprocessing that you used. preprocessing-<threshold>/distribution-tax.txt and preprocessing-<threshold>/distribution-tax.png are created. The text file will give you which taxonomy correspond to which number (22,23,...) and the png file is a figure representing the distribution.
+-> If you use taxonomy: INFOS_with_tax.txt will be created, indicating every (N,L,K) for every type of threshold preprocessing that you used. preprocessing-T/distribution-tax.txt and preprocessing-T/distribution-tax.png are created. The text file will give you which taxonomy correspond to which number (22,23,...) and the png file is a figure representing the distribution.
 
--> If you use min_sim or max_sim: The precedent files and the preprocesssing file will be in a new folder names filtered_min_sim_<min>_max_sim_<max> (with <min> and <max> the values that you have chosen)
+-> If you use min_sim or max_sim: The precedent files and the preprocesssing file will be in a new folder names filtered_min_sim_MIN_max_sim_MAX (with MIN and MAX the values that you have chosen)
 
 ### Part II: description of the files
 
 ***learning_param.py***
 
-**Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_<n_models>models_203_0.008lr with <n_models> the numbers of models to train**
+**Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_N_MODELSmodels_203_0.008lr with N_MODELS the numbers of models to train**
 
 This module takes 
 
@@ -250,7 +250,7 @@ This module takes an MSA preprocessed using preprocessing.py and compute the wei
 
 Arguments needed by the main :
 * input_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
-* ouput_name : name for the output file containing the weights **Default=path<input_name>/weights-<threshold>/weights-<threshold>.txt**
+* ouput_name : name for the output file containing the weights **Default=path(input_name)/weights-T/weights-T.txt with T the threshold that you have chosen**
 * threshold : The percentage of simulutude accepted. **Default=0.8**
 
 
@@ -285,8 +285,8 @@ Arguments needed by the main :
 * MSA_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
-* path: path where to load the file  **Default:path<weights_name>/model_<model_type>-<epochs>epochs-<batchs>batchs/seed<seed>**
-* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-<n_models>,error_postions + output_name+0-<n_models>). **Default:model_average_0-<n_models>**
+* path: path where to load the file  **Default:path(weights_name)/model_MODEL_TYPE-Eepochs-Bbatchs/seedS with MODEL_TYPE the type linear or non-linear, E the numbers of epochs and B the numbers of batchs (all defined in the model_param)**
+* output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-N_MODELS,error_postions + output_name+0-N_MODELS). **Default:model_average_0-N_MODELS WITH N_MODELS the number of models**
 * activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". **Default=square.** 
 
 Example of usage :
@@ -296,7 +296,7 @@ python3 main_model.py DnaK/preprocessing-0.1gaps/preprocessed-0.1gaps.csv DnaK/p
 ```
 
 **What if you want to average several model(s) from a same folder?**
-This case can happen if for example you have already made 5 models with seed203 and 5 others ones with seed24. In this case you can put every models in the same folder called for example "10models" and rename correctly the models going from model_0 to model_9. (Don't forget to add a txt file (with nano <name_txt_file>) to indicate which model was made with which seed, parameters a.s.o.). Then don't worry a function will make an average of your models. You just need to use :
+This case can happen if for example you have already made 5 models with seed203 and 5 others ones with seed24. In this case you can put every models in the same folder called for example "10models" and rename correctly the models going from model_0 to model_9. (Don't forget to add a txt file (with nano NAME_TXT_FILE) to indicate which model was made with which seed, parameters a.s.o.). Then don't worry a function will make an average of your models. You just need to use :
 
    **average_model.py**
    * model_name : The name of the models to average (without the index number _i)
@@ -318,7 +318,7 @@ Arguments needed by the main :
 * number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. **Default=1**
 * type average : if number_models=1 this is neglected. Otherwise it specifies the kind of average 
     ("average_couplings" or "average_couplings_frob"). **Default='average_couplings'**
-* output_name : path of the output file that will contain the coupling coefficients. **Default= "path(model_name)/<type_average>/couplings"**
+* output_name : path of the output file that will contain the coupling coefficients. **Default= "path(model_name)/type_average/couplings"**
 * figure : Boolean to decide if we want to plot the couplings or not (before and after ising). True or False. **Default: False**
 * data_per_col : path for data_per_col.txt representing the number of possible a.a per column in the MSA (created during model.py) (Default: in the same place than the model(s))
 * model_type : type of the model, can be "linear", "non-linear" or "mix". **Default: linear**
