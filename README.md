@@ -1,4 +1,4 @@
-<span style="color:#520099;"> [still in progress....] </span>
+<span style="color:blue;"> still in progress....> </span>
 
 
 
