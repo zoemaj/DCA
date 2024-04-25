@@ -150,6 +150,8 @@ Even if hmmer.org is an amazing tool, it will extract the new sequences with a l
 
 (Note that if you already have your stockolm file converted into fasta file, you can still use this function.)
 
+You can also use this file if you want to take only one part of your reference sequence (for exemple if you want to have only the J domain and not the entere protein), the program will notice that it is smaller than your first sequence and adapt your file. 
+
 ***Be carefull: You need to have the same sequence from your orginal fasta file at the beginning. For example you should have BIP_HUMAN as first sequence. This is important since the program compare your sequence of reference with you first sequence in the fasta file before to remove the useless gaps.***
 
 ***How align two family together?***
