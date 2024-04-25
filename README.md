@@ -169,8 +169,7 @@ This module will read your file and create a csv file (in the folder uniprot-tax
 
 If your file contain the columns 'Gene Names (ordered locus)' and 'Gene Names (ORF)', they will be extracted. (usefull for pairing two types of bacteria proteins)
 
-$${\color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main }$$:
-
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * path_file : The path where to find the list from uniprot.
   
 ```shell 
