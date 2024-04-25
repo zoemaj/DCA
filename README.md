@@ -1,4 +1,4 @@
-$${\color{blue}[still in progress....]}$$
+[still in progress....] \textcolor{red}{red}
 
 
 
