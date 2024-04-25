@@ -1,4 +1,4 @@
-$$ {\color{red} still \space \color{red} in \space \color{red} progress....} $$
+$$ {\color{red} ......................................... \space \color{red} still \space \color{red} in \space \color{red} progress.... \space {\color{red} ..........................................} $$
 
 **last update 25.04.24**
 
