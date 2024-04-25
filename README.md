@@ -269,6 +269,7 @@ Exemple with default value:
 python3 main_weights.py DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps -output_name DnaK/preprocessing-0.1gaps/DnaK_weights-0.8.txt -threshold 0.1
 
 ```
+$${\color{blue} ...................................................................................... }$$
 
 
 ***model.py***
