@@ -187,7 +187,7 @@ folder needed: uniprot-tax
 
 Arguments needed by the main :
 * input_name : name of the file containing the MSA in fasta or csv format
-* output_name : name that will be used to create the output file (**Default path<input_name>/preprocessing-<threshold>gaps/preprocessed_<threshold>.csv**)
+* output_name : name that will be used to create the output file (**Default path/<input_name>/preprocessing-<threshold/>gaps/preprocessed_<threshold>.csv**)
 * threshold : The threshold for the percentage of gaps in a sequence authorised. (**Default 1.0**)
 * min_sim : The minimum similarity authorised between the sequences and the first one. (**Default=0.0**)
 * max_sim : The maximum similarity authorised between the sequences and the first one. (**Default=1.0**)
