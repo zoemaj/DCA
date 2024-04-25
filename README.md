@@ -81,7 +81,7 @@ Each protein has its own file with its name Z.
 -----------------------------------------------------------
 There are two parts:
 
-$${\color{purple} --------------- \space \color{purple} PART \space \color{purple} I \space \color{purple} --------------- : }$$
+$${\color{purple} ------------------- \space \color{purple} PART \space \color{purple} I \space \color{purple} ------------------  }$$
 
 **The construction of the fasta file and the structure 2D map for the contact prediction**. 
 In this part you will:
@@ -92,7 +92,7 @@ In this part you will:
    - define the taxonomy of a sequence: **write_list.py**
    - preprocess the sequences to remove the ones with too much gaps: **preprocessing.py**
      
-$${\color{purple} PART \space \color{purple} II: }$$
+$${\color{purple} ------------------- \space \color{purple} PART \space \color{purple} II \space \color{purple} ------------------  }$$
 
 **The preparation for the model building and learning, and the couplings between the different positions of amino acids.**
 In this part you will:
