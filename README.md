@@ -336,6 +336,8 @@ python3 main_couplings.py DnaK/preprocessing-0.1gaps/weights-0.8/model_linear-50
 ```
 
 ***
+### the dcaTools
+-----------------------------------------------------------
 In addition to these 4 modules. The directory dcaTools contains [3 scripts](https://gitlab.com/ducciomalinverni/dcaTools.git) that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found [here](https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16).
 
 ***extract the contact plot***
