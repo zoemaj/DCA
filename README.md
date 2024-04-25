@@ -182,6 +182,8 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
 $${\color{blue} ...................................................................................... }$$
 
 ***How process you file with preprocessing.py***
+
+![ScreenShot](images/image-preprocessing.png)
  
 The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)? If you want to use the taxonomy, you absolutly need to create the appropriate file with write_list.py
 
