@@ -56,13 +56,108 @@ def extract_list(df):
     #keep only the values
     Node=Node.tolist()
 
+    
+    entry_name=df["Entry Name"][1:]
+    
+    entry_name=entry_name.tolist()
+    try:
+        Organism_lineage=df["Taxonomic lineage"][1:]
+        Organism_name=[]
+        for organism in Organism_lineage:
+            Organism_name.append(organism.split(",")[-1])
+        #be sure to have a space before the name
+        for i in range(len(Organism_name)):
+            if Organism_name[i][0]!=" ":
+                Organism_name[i]=str(" "+Organism_name[i])
+
+            
+    except:
+        print("The column 'Taxonomic lineage' is not in the dataframe. The column 'Organism_name' will not be extracted")
+        pass
+
+    find_one_criteria=False
+    try:
+        OLN_tab=df["Gene Names (ordered locus)"][1:]
+        OLN=[]
+        for O in OLN_tab:
+            if O!="" and O!="; " and O!=";":
+                OLN.append(O)
+            else:
+                OLN.append(" None")
+        #be sure to have a space before the name
+        for i in range(len(OLN)):
+            if OLN[i][0]!=" ":
+                OLN[i]=str(" "+OLN[i])
+        find_one_criteria=True
+    except:
+        print("The column 'Gene Names (ordered locus)' is not in the dataframe. The column 'OLN' will not be extracted")
+        pass
+    
+    try:
+        ORF_tab=df["Gene Names (ORF)"][1:]
+
+        ORF=[]
+        for O in ORF_tab:
+            if O!="" and O!=" " and O!="; " and O!=";":
+                ORF.append(O)
+            else:
+                ORF.append(" None")
+        #be sure to have a space before the name
+        
+
+        for i in range(len(ORF)):
+            if ORF[i][0]!=" ":
+                ORF[i]=str(" "+ORF[i])
+
+        find_one_criteria=True
+    except:
+        print("The column 'Gene Names (ORF)' is not in the dataframe. The column 'ORF' will not be extracted")
+        pass
+    #print(ORF)
+    try:
+        organism_strain=df["Organism"][1:]
+        #organism_strain=organism_strain.tolist()
+        strains=[]
+        #print(organism_strain[0:10])
+        #take only the part after the word "strain"
+        for org in organism_strain:
+            if "strain" in org:
+                # Extracting strain information
+                strain_info = org.split("strain ")[1].split(")")[0].strip()
+                if "," in strain_info:
+                    #remplace it by a dot
+                    strain_info = strain_info.replace(",", ".")
+                # Removing surrounding quotation marks if present
+                if strain_info.startswith('"') and strain_info.endswith('"'):
+                    strain_info = strain_info[1:-1]
+                strains.append(strain_info)
+            else:
+                strains.append("None")
+        
+
+        #be sure to have a space before the name
+        for i in range(len(strains)):
+            if strains[i][0]!=" ":
+                strains[i]=str(" "+strains[i])
+
+    except:
+        print("The column 'Organism' is not in the dataframe. The column 'Strain' will not be extracted")
+        pass
+
+    if find_one_criteria==True:
+        for i in range(len(ORF)):
+            if ORF[i]==" None" and OLN[i]==" None":
+                print(f"The organism with entry_name {entry_name[i]} has no information in the columns 'Gene Names (ordered locus)' and 'Gene Names (ORF)'")
+    
+    
+
     column_to_keep=['superkingdom','kingdom']
 
     tax=df["Taxonomic lineage"]
-    columns_names=tax[1].split(",")
+    columns_names=tax[1].split(",") #take the first line
     #keep only the terms in (..)
     for i in range(len(columns_names)):
-        columns_names[i]=columns_names[i].split("(")[1][:-1]
+        columns_names[i]=columns_names[i].split("(")[1][:-1] #remove the () and the space
     print("The different taxonomy identifiers are the following: ",columns_names)
     #check that column_to_keep is in columns_names, if not remove it from column_to_keep
     for column in column_to_keep:
@@ -87,18 +182,42 @@ def extract_list(df):
     
     dictionary_columns_to_keep={}
     list_columns_found={}
-    dictionary_columns_to_keep["Node"]=Node
+    dictionary_columns_to_keep["OX"]=Node 
+    try:
+        dictionary_columns_to_keep["Organism_name"]=Organism_name
+    except:
+        pass
+    try:
+        dictionary_columns_to_keep["OLN"]=OLN 
+    except:
+        pass
+    try:
+        dictionary_columns_to_keep["ORF"]=ORF
+    except:
+        pass
+    try:
+        dictionary_columns_to_keep["Strain"]=strains
+    except:
+        pass
+    
     for column in column_to_keep: #initialize the dictionary
         dictionary_columns_to_keep[column]=[]
         list_columns_found[column]=False
-    for i,line in enumerate(tax[1:]):#for each line
-        line=line.split(",")
+    for i,line in enumerate(tax[1:]):#for each line except the first one corresponding the the header names
+        line=line.split(",") #split the line
         for el in line:
             #look if there is a "()"
             if "(" in el:
-                line_name=el.split("(")[1][:-1]
-            if line_name in column_to_keep:
-                dictionary_columns_to_keep[line_name].append(el.split("(")[0])
+                line_name=el.split("(")[1][:-1] #remove the term in ()
+            if line_name in column_to_keep: #for example if it is a superkingdom or a kingdom
+                #dictionary_columns_to_keep[line_name].append(el.split("(")[0]) # modification due to the following reason
+                #the next operation is because we detect a problem with the column superkingdom for "Viruses" that doesn't have a space before....
+                #this causes problem with the preprocessing.py. To be sure that we don't have any problem, we add a space before the values that don't start with a space
+                name_to_add=el.split("(")[0]
+                if name_to_add[0]!=" ":
+                    name_to_add=" "+name_to_add
+                dictionary_columns_to_keep[line_name].append(name_to_add)
+                ############################
                 list_columns_found[line_name]=True
         #check that we have all the columns
         for key, value in list_columns_found.items():
@@ -110,7 +229,7 @@ def extract_list(df):
     #
     #for each key of dictionary except Node
     for key, value in dictionary_columns_to_keep.items():
-        if key=="Node":
+        if key=="OX" or key=="Organism_name" or key=="OLN" or key=="ORF" or key=="Strain":
             continue
         else:
             #save the unique values of the column, and order them with the higher number of occurences first
@@ -120,7 +239,7 @@ def extract_list(df):
             with open("uniprot-tax/"+name_sample+"-"+key+".txt", "w") as file:
                 for line in unique_N:
                     file.write(line + ": " + str(value.count(line)) + "\n")
-        
+    #add the organism name after the Node     
     #save the dictionary as a dataframe
     df=pd.DataFrame(dictionary_columns_to_keep)
     #save the dataframe as a csv file
