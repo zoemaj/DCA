@@ -177,7 +177,7 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
    python3 main_write_list.py uniprot-tax/list/bip-taxonomy.xls
 ```
 
-$${\color{blue} ..................................................................................... }$$:
+$${\color{blue} ...................................................................................... }$$
 
 ***How process you file with preprocessing.py***
  
@@ -205,6 +205,7 @@ exemple using not the default values:
 ```shell
   python3 main_preprocessing.py DnaK/DnaK.fasta -output_name DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.1 -min_sim 0.4 -max_sim 0.6
 ```
+$${\color{blue} ...................................................................................... }$$
 
 If you apply this function, you will notice that several files can be created:
 
@@ -244,6 +245,7 @@ Example of usage :
 python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2models_203_0.008lr
 
 ```
+$${\color{blue} ...................................................................................... }$$
 
 ***weights.py***
 
@@ -301,6 +303,7 @@ Example of usage :
 ``` shell
 python3 main_model.py DnaK/preprocessing-0.1gaps/preprocessed-0.1gaps.csv DnaK/preprocessing-0.1gaps/weights-0.8/weights-0.8.txt Parameters_learning/SDG_50_5models_203_0.008lr.txt
 ```
+$${\color{blue} ...................................................................................... }$$
 
 **What if you want to average several model(s) from a same folder?**
 This case can happen if for example you have already made 5 models with seed203 and 5 others ones with seed24. In this case you can put every models in the same folder called for example "10models" and rename correctly the models going from model_0 to model_9. (Don't forget to add a txt file (with nano NAME_TXT_FILE) to indicate which model was made with which seed, parameters a.s.o.). Then don't worry a function will make an average of your models. You just need to use :
@@ -339,6 +342,7 @@ Example of usage :
 ```shell
 python3 main_couplings.py DnaK/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/model -number_models 5
 ```
+$${\color{blue} ...................................................................................... }$$
 
 ***
 ### the dcaTools
@@ -361,6 +365,7 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
 
 python3 dcaTools/plotTopContacts PF00226/contact-map/PF00226.map PF00226/preprocessing-0.1gaps/weights-0.8/model_linear-50epochs/seed203/average-models-and-frob/couplings 150 8.5
 ```
+$${\color{blue} ...................................................................................... }$$
 
 ***mapPDB***
 
