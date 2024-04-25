@@ -181,7 +181,7 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
 
 $${\color{blue} ...................................................................................... }$$
 
-***How process you file with preprocessing.py***
+***How preprocess your file with preprocessing.py***
 
 ![ScreenShot](images/image-preprocessing.png)
  
