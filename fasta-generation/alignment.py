@@ -100,16 +100,19 @@ def execute(seq_base,fasta_file):
                 seq_init,seq_end=input("Please enter the start and end of the sequence base (separated by a space). Assume the first letter of the original sequence beginning with index 1. ").split()
                 while int(seq_init)>int(seq_end):
                     seq_init,seq_end=input("seq_init must be < seq_end" ).split()
-                while int(seq_init)<1 or int(seq_end)>len(seq_base)+1:
-                    seq_init,seq_end=input(f"Please enter numbers between 1 and {len(seq_base)} ").split()
+                while int(seq_init)<1 :
+                    print(seq_base)
+                    seq_init,seq_end=input(f"Please enter numbers >1 ").split()
                 seq_init=int(seq_init)-1 #index start at 0
                 seq_end=int(seq_end)-1
-                if seq_base!=seq_without_gap[seq_init:seq_end]:
+                if seq_base!=seq_without_gap[seq_init:seq_end+1]:
                     print("The sequences are still different")
+                    print(seq_base)
+                    print(seq_without_gap[seq_init:seq_end+1])
                 else:
                     print("Now the sequences are the same and length is: ", len(seq_base))
-                    #find the index in seq corresponding to the first element == to seq_without_gap[seq_init-1]
-                    #count the number of same caracters than seq_without_gap[seq_init-1] before seq_without_gap[seq_init-1]
+                    #find the index in seq corresponding to the first element == to seq_without_gap[seq_init]
+                    #count the number of same caracters than seq_without_gap[seq_init] before seq_without_gap[seq_init]-1
                     count_start=0
                     count_end=0
                     for i in range(0,seq_init,1):
@@ -130,6 +133,7 @@ def execute(seq_base,fasta_file):
                                 seq_init=i
                                 break
                             count_start-=1
+        
 
                 
                     
