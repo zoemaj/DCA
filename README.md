@@ -271,23 +271,27 @@ python3 main_weights.py DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps -output_
 
 This module builds and trains a neural network on the MSA to be able to predict the value of a residue given all other residues of the sequence.
 
-The user can choose between 3 architectures for the neural network (by default: linear) :
+You can choose between 2 architectures for the neural network (by default: linear) :
 
 * linear : this is simply a linear classifier (with softmax activation on the output layer and cross entropy loss) whose input and output are the residues and where the output residues are connected to every input residues exept from themselves (in order to avoid a trivial identity)
-* non-linear : this model adds a hidden layer to the network, the architecture is designed such that the output residues are disconnected from the corresponding input residues. Two activation function are available for the hidden layer, a custom activation that squares the output of the hidden layer ("square") and a tanh activation ("tanh"). **need to be implemented, not actually working**
-* mix : this model is a combination of the first two, the input and output neurons are connected both linearly and via a hidden layer. Both the square and tanh activations are possible for the hidden layer **need to be implemented, not actually working**
+* non-linear : this model adds a hidden layer to the network, the architecture is designed such that the output residues are disconnected from the corresponding input residues. Two activation function are available for the hidden layer, a custom activation that squares the output of the hidden layer ("square") and a tanh activation ("tanh"). 
+
+If your fasta file is actually homologous series of two proteins A and B in pair (you are want to visualise their binding) you have two options: 
+
+* predict ai from A with the amino acids of A (without ai) and of B (and vice versa with B) with a linear or non-linear architecture -> normal situation, don't precise a length_prot1
+* predict ai from A only with the amino acids of B (and vice versa with A) with a linear or non-linear architecture -> you need to precise the length of A with the argument length_prot1
+
 
 After training, the learning curve will be plotted and the model will be saved as well as the error rate after each epoch and the final error rate per residue.
-
-The hyper parameters can be changed in the function "execute" of the file model.py
 
 Arguments needed by the main :
 * MSA_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
+* length_prot1 : If the fasta file is composed of pairs of proteins A and B, and you want to learn to find A with only B (and vice versa), you can specify the length of the first protein. **Default=0**
 * path: path where to load the file  **Default:path(weights_name)/model_MODEL_TYPE-Eepochs-Bbatchs/seedS with MODEL_TYPE the type linear or non-linear, E the numbers of epochs and B the numbers of batchs (all defined in the model_param)**
 * output_name : name that will be used to create the 3 output files (model_+output_name, errors_  +output_name+0-N_MODELS,error_postions + output_name+0-N_MODELS). **Default:model_average_0-N_MODELS WITH N_MODELS the number of models**
-* activation : activation function for the hidden layer if model_type is "non-linear" or "mix" (otherwise this parameter will be ignored), can be "square" or "tanh". **Default=square.** 
+* errors_computations : If True, the errors will be computed. **Default=False**
 
 Example of usage :
 
@@ -301,12 +305,11 @@ This case can happen if for example you have already made 5 models with seed203 
    **average_model.py**
    * model_name : The name of the models to average (without the index number _i)
    * n_models : The number of models to average
+     
    ``` shell
    python3 main_average_model.py BiP/preprocessing-1.0gaps/weights-0.8/model_linear-50epochs/10models/model 10
 
    ```
-   
-
 
 ***couplings.py***
 
