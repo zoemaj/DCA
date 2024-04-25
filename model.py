@@ -24,7 +24,7 @@ class SquareActivation(nn.Module) :
 ####################################################################################################################################
 ########################## CREATION OF THE MASKED   ################################################################################
 ####################################################################################################################################
-def generate_indices_mask(L,K,data_per_col,path):
+def generate_indices_mask(L,K,data_per_col,path,length_prot1=0):
     ''' 
     This function is used to generate the indices that will be used to mask the model.
     The indices are written in a txt file that will be saved in the folder.
@@ -37,6 +37,15 @@ def generate_indices_mask(L,K,data_per_col,path):
         data_per_col: for each colomn if there is a one at an amino position it means that it is not possible to have this position! -> need to be masked in the model
         path: path where the file will be saved
     '''
+    if length_prot1!=0:
+      length_prot2=L-length_prot1
+      if K>21:
+         length_prot2=length_prot2-1
+      print("-------------- PAIR OF PROTEINS ----------------")
+      print("You are using a pair of proteins, the first protein A has a length of ",length_prot1," and the second protein B has a length of ",length_prot2)
+      print("We will masks the links between the amino acids of the same protein")
+      print("A will be predicted with B and vice versa...")
+
     #check if the file already exists
     if os.path.exists(path+"/indice_mask.txt"):
       #in this case, we will not compute it again
@@ -46,20 +55,29 @@ def generate_indices_mask(L,K,data_per_col,path):
     else: 
       print("Writing the indices_mask...")
       with open(path+"/indice_mask.txt", "w") as file:
-        for j in range(0, L * K, K):
-            for a in range(j, j + K):
-                for b in range(j, j + K):
-                    file.write(str(a) + " " + str(b) + "\n")
+        if length_prot1==0:
+          for j in range(0, L * K, K):
+              for a in range(j, j + K):
+                  for b in range(j, j + K):
+                      file.write(str(a) + " " + str(b) + "\n")
+        else:
+          
+          for a in range(0, length_prot1 * K):
+            for b in range(0, length_prot1 * K):
+              file.write(str(a) + " " + str(b) + "\n")
+          for a in range(length_prot1 * K,L*K):
+            for b in range(length_prot1 * K,L*K):
+              file.write(str(a) + " " + str(b) + "\n")
         for col_i in range(L):
-            for amino in range(K):
-                if data_per_col[amino, col_i] == 1:
-                    index_amino = col_i * K + amino
-                    for b in range(col_i * K):
-                        file.write(str(index_amino) + " " + str(b) + "\n")
-                        file.write(str(b) + " " + str(index_amino) + "\n")
-                    for b in range((col_i + 1) * K, L * K):
-                        file.write(str(index_amino) + " " + str(b) + "\n")
-                        file.write(str(b) + " " + str(index_amino) + "\n")
+          for amino in range(K):
+            if data_per_col[amino, col_i] == 1:
+              index_amino = col_i * K + amino
+              for b in range(col_i * K):
+                  file.write(str(index_amino) + " " + str(b) + "\n")
+                  file.write(str(b) + " " + str(index_amino) + "\n")
+              for b in range((col_i + 1) * K, L * K):
+                  file.write(str(index_amino) + " " + str(b) + "\n")
+                  file.write(str(b) + " " + str(index_amino) + "\n")
       print("The file has been successfully created : ",path+"/indice_mask.txt")
     return
 
@@ -524,9 +542,10 @@ def build_and_train_model(data,labels, original_shape, separation, model_type,ac
   del training_set
   del validation_set
   del test_set
+  gc.collect()
   return model, errors, errors_positions
   
-def execute(MSA_file, weights_file, model_params, path="", output_name='/',errors_computation=False) :
+def execute(MSA_file, weights_file, model_params, length_prot1, path="", output_name='/',errors_computation=False) :
   
   """
   MSA_file: name of the file containing the preprocessed MSA
@@ -681,7 +700,7 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/',error
   
   (_,L,K) = original_shape
   if model_type=="linear":
-    generate_indices_mask(L, K, data_per_col,path)
+    generate_indices_mask(L, K, data_per_col,path, length_prot1)
   elif model_type=="non-linear":
     generate_indices_mask_non_linear(L, K, nb_hidden_neurons,data_per_col,path)
   else:
@@ -757,8 +776,11 @@ def execute(MSA_file, weights_file, model_params, path="", output_name='/',error
       del training_set
       del validation_set
       del test_set
+      
 
     else:
+      #print the seed location
+      print("seed location: ",np.random.get_state()[1][0])
       print("-------- model "+str(i)+"--------")
       model, errors, errors_positions = build_and_train_model(data,labels, original_shape, separation, model_type,activation, nb_hidden_neurons, max_epochs, batch_size, validation, test, optimizer, device, use_cuda, path)
       torch.save(model, model_name)

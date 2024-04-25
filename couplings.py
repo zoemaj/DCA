@@ -327,7 +327,7 @@ def ising_gauge_W3(couplings, original_shape,indexes_batch,batch_size,data_per_c
     return new_couplings_3d
     
 
-def ising_gauge(couplings, original_shape, data_per_col) :
+def ising_gauge(couplings, original_shape, data_per_col,length_prot1) :
     """
     apply Ising gauge on the coupling coefficients
 
@@ -370,19 +370,35 @@ def ising_gauge(couplings, original_shape, data_per_col) :
             sum_rowcol[j, col_i:col_i+K] = np.sum(sum_row[j, col_i:col_i+K])
             sum_rowcol[j, col_i:col_i+K] = np.where(mask_row & mask_col, sum_rowcol[j, col_i:col_i+K], 0)
     print("--------- computing the new_couplings -----------")
-    for j in range(L * K):
-        for i in range(L * K):
-            col_i=i//K
-            k_i=i%K
-            row_j=j//K
-            k_j=j%K
-            K_beta = np.sum(data_per_col[:, col_i] == 0)
-            K_alpha = np.sum(data_per_col[:, row_i] == 0)
-            new_couplings[j, i] = (
-                new_couplings[j, i] - sum_row[j, i] / K_alpha
-                - sum_col[j, i] / K_beta
-                + sum_rowcol[j, i] / (K_alpha * K_beta)
-            )
+    if length_prot1==0:
+        for j in range(L * K):
+            for i in range(L * K):
+                col_i=i//K
+                k_i=i%K
+                row_j=j//K
+                k_j=j%K
+                K_beta = np.sum(data_per_col[:, col_i] == 0)
+                K_alpha = np.sum(data_per_col[:, row_i] == 0)
+                new_couplings[j, i] = (
+                    new_couplings[j, i] - sum_row[j, i] / K_alpha
+                    - sum_col[j, i] / K_beta
+                    + sum_rowcol[j, i] / (K_alpha * K_beta)
+                )
+    else:
+        for j in range(0,length_prot1 * K):
+            for i in range(length_prot1 * K,L*K):
+                col_i=i//K
+                k_i=i%K
+                row_j=j//K
+                k_j=j%K
+                K_beta = np.sum(data_per_col[:, col_i] == 0)
+                K_alpha = np.sum(data_per_col[:, row_i] == 0)
+                new_couplings[j, i] = (
+                    new_couplings[j, i] - sum_row[j, i] / K_alpha
+                    - sum_col[j, i] / K_beta
+                    + sum_rowcol[j, i] / (K_alpha * K_beta)
+                )
+                new_couplings[i, j] = new_couplings[j, i]
     return new_couplings
     
 
@@ -406,12 +422,13 @@ def average_product_correction(f) :
     return f
     
 
-def couplings(model_name, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear",L=0,K=0) :
+def couplings(model_name, length_prot1=0, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear",L=0,K=0) :
 
     ###################################################################################
     ################# EXTRACTION OF THE MODEL(S) ######################################
     ############ & data_per_col (the same for every model(s)) #########################
     ###################################################################################
+    
     print("--------------------------------------------------------------------------")
     print("Welcome in the couplings step, we are extracting the parameters...")
 
@@ -471,8 +488,9 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
             threshold_preprocessed=float(threshold_preprocessed)
             
         except:
-            threshold_preprocessed=input("Please enter the threshold preprocessed used")
-            path_info=input("Please enter the path where to find the file with the information about N,L,K")
+            threshold_preprocessed=input("Please enter the threshold preprocessed used:  ")
+            threshold_preprocessed=float(threshold_preprocessed)
+            path_info=input("Please enter the path where to find the file with the information about N,L,K:  ")
 
         
         
@@ -506,6 +524,13 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
         #take the path of the model_name and add the name 'couplings' to it
         output_name = os.path.dirname(model_name)
         output_name = os.path.join(output_name, 'couplings')
+
+    if length_prot1!=0:
+        length_prot2=L-length_prot1
+        print("---------------------------- TWO PROTEINS --------------------------------")
+        print("Length of the first protein:",length_prot1)
+        print("Length of the second protein:",length_prot2)
+        print("--------------------------------------------------------------------------")
     ###################################################################################
     ################# WEIGHT EXTRACTION AND ISING GAUGE FOR THE MODEL(S) ##############
     ################### (depend if we consider the taxonomy or not)####################
@@ -563,7 +588,10 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
             for step in range(number_model):
                 if step in couplings_ising_to_do:
                     print("extraction of the couplings for the model: ", step+1, "/", number_model)
-                    model=torch.load(model_name+'_' + str(step))
+                    if number_model>1:
+                        model=torch.load(model_name+'_' + str(step))
+                    else:
+                        model=torch.load(model_name)
                     couplings=extract_couplings(model, model_type, (L,K),data_per_col,output_name)
                     if K>21:
                         #with tax we need to remove the last blocs of size K
@@ -651,7 +679,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
                         couplings = np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
                     else:
                         couplings=np.loadtxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
-                        couplings = ising_gauge(couplings, (L,K), data_per_col)
+                        couplings = ising_gauge(couplings, (L,K), data_per_col,length_prot1)
                         np.savetxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"), couplings)
                         print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
                     #ALL_couplings_ising.append(couplings)
@@ -679,7 +707,7 @@ def couplings(model_name, number_model=1, type_average='average_couplings', outp
                 average_couplings=np.loadtxt(path_couplings_before)
                 average_couplings=np.copy(average_couplings)
                 #print("shape data_per_col:", data_per_col.shape)
-                average_couplings=ising_gauge(average_couplings,(L,K), data_per_col)
+                average_couplings=ising_gauge(average_couplings,(L,K), data_per_col,length_prot1)
                 # Create the directory and its parent directories if they don't exist
                 os.makedirs(couplings_path, exist_ok=True)
                 np.savetxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"), average_couplings)

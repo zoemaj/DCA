@@ -5,6 +5,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser()
     #parser.add_argument("triplets_name",help="File containing the triplets of the NN obtained using model.py.")
     parser.add_argument("model_name", help="Name of the file where the trained model was saved", type=str)
+    parser.add_argument("-length_prot1", help="If the fasta file is composed of pairs of proteins A and B, and you want to learn to find A with only B (and vice versa), you can specify the length of the first protein. Default=0", default=0, type=int)
     parser.add_argument("-number_models", help="number of model to train. Default=1", default=1, type=int)
     parser.add_argument("-type_average", help= "if number_models this is neglected. Otherwise you need to choose between 'average_couplings' or 'average_couplings_frob' with respectively do the average for each couplings of each model, do the average for each couplings and frobenius of each model. Default='average_couplings'", default="average_couplings", type=str)
     parser.add_argument("-output_name", help="Name for the output file that will containg the couplings. Default=path(model_name)/<type_average>/couplings", default="/", type=str)
@@ -15,4 +16,4 @@ if __name__=="__main__":
     parser.add_argument("-K", help="value of K, if we have not the INFOS file", default=0, type=int)
     args=parser.parse_args()
     
-    couplings.couplings(args.model_name, args.number_models, args.type_average, args.output_name, args.figure, args.data_per_col, args.model_type, args.L, args.K)
+    couplings.couplings(args.model_name, args.length_prot1, args.number_models, args.type_average, args.output_name, args.figure, args.data_per_col, args.model_type, args.L, args.K)

@@ -37,13 +37,14 @@ def compute_average(model_name, n_models) :
     average_model = models[0]
     average_model = average_model.to(device)
     # Initialize the parameters for averaging
-    average_parameters = average_model.state_dict()
+    average_parameters = average_model.state_dict() #model.state_dict() -> model_parameters
 
     # List to accumulate the gradients of all models
     #grad_accumulator = [torch.zeros_like(param) for param in ALLmodel[0].parameters()]
     print("-------- accumulation models --------")
     # Loop over models and accumulate the model parameters
-    for model in models:
+    #no the models[0] that is already in average_model
+    for model in models[1:]:
         model_parameters = model.state_dict()
         for key in model_parameters:
             average_parameters[key] += model_parameters[key]

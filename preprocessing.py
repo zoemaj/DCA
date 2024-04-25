@@ -26,6 +26,7 @@ def find_the_tax(file_name):
                 last_name=diff_tax[-1].split("\n")[0]
                 diff_tax_new=diff_tax[:-1]
                 diff_tax_new.append(last_name)
+
                 start_id=2 #remove the print of the node and organism_name
                 if "OLN" in diff_tax_new:
                     start_id=3
@@ -41,7 +42,9 @@ def find_the_tax(file_name):
                 E_dic = {}
                 for line in lines[start_id:]:
                     list_tax = line.split(", ")
+                    print("list_tax: ", list_tax)
                     node = list_tax[0]
+                    print("OX: ", node)
                     tax = list_tax[diff_tax_new.index(R2)]
                     if " " in tax:
                         tax= tax.split(" ")[0]
@@ -71,14 +74,47 @@ def find_the_tax(file_name):
                     unique_class=R4
     return E_dic, unique_class
 
+def filter_data_with_sim(fasta_file,min_sim=0.0,max_sim=1.0):
+    ''' compare the sequences with the first one and remove the sequences with a similarity less than min_sim and more than max_sim'''
+    ''' will create a new fasta file with the filtered sequences '''
+    print("------- Filtering the data by keeping only the sequences with a similarity between ", min_sim, " and ", max_sim, " --------")
+    directory = os.path.dirname(fasta_file)
+    print("The directory is ", directory)
+    fasta_file_filtered = directory + "/filtered_min_sim_" + str(min_sim) + "_max_sim_" + str(max_sim) + "/" + os.path.basename(fasta_file)
+    if not os.path.exists(os.path.dirname(fasta_file_filtered)):
+        os.makedirs(os.path.dirname(fasta_file_filtered))
+    print("The filtered fasta file will be saved in ", fasta_file_filtered)
+    #read the fasta file
+    sequences = list(SeqIO.parse(fasta_file, "fasta"))
+    #take the first sequence as the reference
+    reference = sequences[0].seq
+    with open(fasta_file_filtered, "w") as file:
+        file.write(">"+sequences[0].description+"\n")
+        file.write(str(sequences[0].seq)+"\n")
+        for sequence in sequences[1:]:
+            #compute the similarity
+            similarity = sum([1 for i in range(len(reference)) if reference[i] == sequence.seq[i]])/len(reference)
+            if similarity > min_sim and similarity < max_sim:
+                #write the sequence in the new file
+                file.write(">"+sequence.description+"\n")
+                file.write(str(sequence.seq)+"\n")
+
+    return fasta_file_filtered
 
 
-def preprocessing(input_name, output_name='', threshold=1.0) :
+
+
+
+
+def preprocessing(input_name, output_name='', threshold=1.0,min_sim=0.0,max_sim=1.0) :
     """
     input_name: name of the file containing the MSA in fasta format or csv
     output_name: name for the output file, default is the same path than the input file with the name preprocessing-(threshold)gaps/preprocessed-(threshold)gaps.csv
     threshold: the threshold for the percentage of gaps in a sequence, default is 1.0
     """
+    if min_sim!=0.0 and max_sim!=1.0:
+        input_name=filter_data_with_sim(input_name, min_sim, max_sim)
+            
     if output_name == '':
         path_folder=input_name.split("/")[:-1] #take the path of the input file
         path_folder="/".join(path_folder)
@@ -96,6 +132,7 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
     K=21
     #load the sequences
     if input_name.endswith('.fasta'):
+        
         MSA = list(SeqIO.parse(input_name, "fasta"))
         #transform the characters in upper case
         for sequence in MSA:
@@ -158,12 +195,28 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
             for sequence in tqdm(MSA):
                 #extrat the Description
                 #take only the part that start with OX
-                OX=sequence[0]
+                if "-" in sequence[0]: #case when two proteins
+                    OX1=sequence[0].split("-")[0]
+                    OX2=sequence[0].split("-")[1]
+                    if OX1==OX2:
+                        OX=OX1
+                        OX=str(OX)
+                        print("OX: ", OX)
+                    else:
+                        print("problem")
+                        print("OX1: ", OX1)
+                        print("OX2: ", OX2)
+                        return
+                else:
+                    OX=sequence[0]
+                
                 #find the node in the dictionary
                 if OX not in big_E_dic:
                     tax='Other'
+                    print(f"{OX} not in big_E_dic")
                 else:
                     name=str(big_E_dic.get(OX)).split()[0]
+                    #print("name: ", name)
                     if name in big_unique_class:
                         tax=name
                     else:
@@ -183,9 +236,21 @@ def preprocessing(input_name, output_name='', threshold=1.0) :
             #save it in the same path than output_name 
             #plt.savefig(output_name.split(".")[0]+"_distribution-tax.png")
             path_hist=output_name.split("/")[:-1]
-            plt.savefig("/".join(path_hist)+"/distribution-tax.png")
+            path_hist="/".join(path_hist)
+            
+            #path_img=os.join(path_hist, "distribution-tax.png")
+            path_img=path_hist+"/distribution-tax.png"
+
+
+            #if the folder doesn't exist create it
+            if not os.path.exists(os.path.dirname(path_img)):
+                #create it
+                os.makedirs(os.path.dirname(path_img))
+            
+
+            plt.savefig(path_img)
             #save also a text file with two colomns: the tax and the number associated (22,23,...,K-1)
-            with open("/".join(path_hist)+"/distribution-tax.txt", "w") as file:
+            with open(path_hist+"/distribution-tax.txt", "w") as file:
                 for i, tax in enumerate(big_unique_tax):
                     id=i+21
                     file.write(tax + " : " + str(id) + "\n")
