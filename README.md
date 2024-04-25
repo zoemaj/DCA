@@ -81,7 +81,7 @@ Each protein has its own file with its name Z.
 -----------------------------------------------------------
 There are two parts:
 
-$${\color{purple} PART \space \color{purple} I: }$$
+$${\color{purple} --------------- \space \color{purple} PART \space \color{purple} I \space \color{purple} --------------- : }$$
 
 **The construction of the fasta file and the structure 2D map for the contact prediction**. 
 In this part you will:
