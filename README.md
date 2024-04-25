@@ -253,6 +253,8 @@ $${\color{blue} ................................................................
 
 ***weights.py***
 
+![ScreenShot](images/image-weights.png)
+
 This module takes an MSA preprocessed using preprocessing.py and compute the weights of each sequence. The weights of a sequence is the inverse number of sequences in the MSA that have more than 80% similarity with it. Once computed, the weights will be written in an output file.
 
 
