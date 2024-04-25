@@ -177,6 +177,8 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
    python3 main_write_list.py uniprot-tax/list/bip-taxonomy.xls
 ```
 
+$${\color{blue} ..................................................................................... }$$:
+
 ***How process you file with preprocessing.py***
  
 The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)? If you want to use the taxonomy, you absolutly need to create the appropriate file with write_list.py
