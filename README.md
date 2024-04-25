@@ -23,7 +23,7 @@ If you want to test some functions with a short set of sequences please go direc
 -----------------------------------------------------------
 The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to **predict the type of a residue given all other residues** in a sequence and then to **extract the knowledge learned by the network to do contact prediction**.
 
-! [Image Alt text](image_introduction.png)
+! [Image Alt text](image-introduction.png)
 
 ## What about chaperons?
 -----------------------------------------------------------
