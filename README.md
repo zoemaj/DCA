@@ -1,6 +1,5 @@
-```html
-<span style="color:blue;"> still in progress.... </span>
-```
+$${\color{red} still \space \color{red} in \space \color{red} progress....}$$
+
 
 
 
