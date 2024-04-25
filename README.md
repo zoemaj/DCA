@@ -1,4 +1,4 @@
-[still in progress....] \textcolor{red}{red}
+<span style="color:#520099;"> [still in progress....] </span>
 
 
 
