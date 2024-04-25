@@ -181,7 +181,7 @@ Arguments needed by the main :
  
 The user will answer to some questions in the terminal (keep the taxonomy or not, which protein ?, which taxonomy (kingdom, division,...)? If you want to use the taxonomy, you absolutly need to create the appropriate file with write_list.py
 
-You can specify the maximum percentage of gaps that you authorise. You can also specify the minimum/maximum of similarity between the sequences and the first one that you authorised. Every sequences with more than this percentage, or with too few or too many similarity, are deleted. Limiting the similiraty percentage can be usefull if you don't want sequences too different with your reference sequence per exemple. 
+You can specify the maximum percentage of gaps that you authorise. You can also specify the minimum/maximum of similarity between the sequences and the first one that you authorised. Every sequences with more than this percentage, or with too few or too many similarity, are deleted. Specify the similiraty percentage can be usefull if you don't want sequences too different with your reference sequence per exemple. 
 
 folder needed: uniprot-tax
 
@@ -202,6 +202,14 @@ exemple using not the default values:
 ```shell
   python3 main_preprocessing.py DnaK/DnaK.fasta -output_name DnaK/preprocessing-1.0gaps/preprocessed-1.0gaps.csv -threshold 0.1 -min_sim 0.4 -max_sim 0.6
 ```
+
+If you apply this function, you will notice that several files can be created:
+
+-> If you don't use taxonomy: INFOS_no_tax.txt will be created, indicating every (N,L,K) for every type of threshold preprocessing that you used.
+
+-> If you use taxonomy: INFOS_with_tax.txt will be created, indicating every (N,L,K) for every type of threshold preprocessing that you used. preprocessing-<threshold>/distribution-tax.txt and preprocessing-<threshold>/distribution-tax.png are created. The text file will give you which taxonomy correspond to which number (22,23,...) and the png file is a figure representing the distribution.
+
+-> If you use min_sim or max_sim: The precedent files and the preprocesssing file will be in a new folder names filtered_min_sim_<min>_max_sim_<max> (with <min> and <max> the values that you have chosen)
 
 ### Part II: description of the files
 
