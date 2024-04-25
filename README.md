@@ -101,7 +101,7 @@ In this part you will:
    - determine the weights of each sequences in order to have a distribution more "homogenous" (be carefull this is not the weights of the models but "how much a sequence will be considered". ***If a sequence is very semilar with others, its weight will be small to compensate its dominance***): **weights.py**
    - build and train the model(s): **model.py**
    - determine the couplings between the positions of amino acids **couplings.py**
-
+$${\color{purple} ---------------------------------------------------------------------------------------------  }$$
 (Additionally, we can run the contact map with **dcaTools/plotTopContacts**)
 
 Each of them is accompanied by **a main file** that can be directly executed from command line: python3 main_NAME.py PARAMETER1 PARAMETER2 ...
