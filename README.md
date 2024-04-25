@@ -169,6 +169,7 @@ This module will read your file and create a csv file (in the folder uniprot-tax
 
 If your file contain the columns 'Gene Names (ordered locus)' and 'Gene Names (ORF)', they will be extracted. (usefull for pairing two types of bacteria proteins)
 
+
 $${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * path_file : The path where to find the list from uniprot.
   
@@ -184,7 +185,8 @@ You can specify the maximum percentage of gaps that you authorise. You can also 
 
 folder needed: uniprot-tax
 
-Arguments needed by the main :
+
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * input_name : name of the file containing the MSA in fasta or csv format
 * output_name : name that will be used to create the output file (**Default path/input_name/preprocessing-Tgaps/preprocessed_T.csv with T the threshold chosen**) 
 * threshold : The threshold for the percentage of gaps in a sequence authorised. (**Default 1.0**)
@@ -216,9 +218,8 @@ If you apply this function, you will notice that several files can be created:
 
 **Please note that you don't need to compile again different learning parameters files if you want to use one already existing in the folder Parameters_learning. If you want to use the condition considered as the most optimal take SDG_50_N_MODELSmodels_203_0.008lr with N_MODELS the numbers of models to train**
 
-This module takes 
 
-Arguments needed by the main :
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * epochs : number of epochs to train, int
 * batchs : batch_size used during the training, int
 * modeL-type : type of the model: linear, non-linear or mix
@@ -247,7 +248,7 @@ python3 main_learning_param.py 50 32 linear 2 203 Parameters_learning/SDG_50_2mo
 This module takes an MSA preprocessed using preprocessing.py and compute the weights of each sequence. The weights of a sequence is the inverse number of sequences in the MSA that have more than 80% similarity with it. Once computed, the weights will be written in an output file.
 
 
-Arguments needed by the main :
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * input_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * ouput_name : name for the output file containing the weights **Default=path(input_name)/weights-T/weights-T.txt with T the threshold that you have chosen**
 * threshold : The percentage of simulutude accepted. **Default=0.8**
@@ -283,7 +284,8 @@ If your fasta file is actually homologous series of two proteins A and B in pair
 
 After training, the learning curve will be plotted and the model will be saved as well as the error rate after each epoch and the final error rate per residue.
 
-Arguments needed by the main :
+
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * MSA_name : name of the file containing the preprocessed MSA (i.e. the output file of preprocessing.py)
 * weights_name : name of the file containing the weights of the MSA (i.e. the output file of weights.py)
 * model_parm : the file .txt format with the different learning parameters
@@ -315,7 +317,8 @@ This case can happen if for example you have already made 5 models with seed203 
 This module extracts from the trained model (the output of model.py) the coupling coefficients (which describe the interaction between any two residues for each categories) and applies to them a series of operations to make them suitable for contact prediction. It applies the Ising gauge to the coupling coefficients, makes
 the matrix of couplings symetrical by averaging with its transpose, takes the Frobenius norm of over all the categories of the residues and apply average product correction.
 
-Arguments needed by the main :
+
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * model_name : name of the file containing the saved model from model.py. For number_models=1 write the path of the model, for number_models>1 write the path of the model without the numbers. As instance if you have model_test_1, model_test_2 you juste need to write model_test
 * length_prot1 : If the fasta file is composed of pairs of proteins A and B, and you want to learn to find A with only B (and vice versa), you can specify the length of the first protein. **Default=0**
 * number_models : if =1, we have only one model, if >1 we can have an average on the couplings or an average on the couplings and frobenius. **Default=1**
@@ -342,7 +345,9 @@ In addition to these 4 modules. The directory dcaTools contains [3 scripts](http
 
 ***extract the contact plot***
 This module plot the predicted contact on the ones predicted by alpha fold
-Argument needed by the main:
+
+
+$${\color{blue} ........................... \space \color{blue} Arguments \space \color{blue} needed \space \color{blue} by \space \color{blue} the \space \color{blue} main \space \color{blue} ........................... }$$:
 * pdbMap : Structural contact map extracted from PDB
 * dcaFile : DCA prediction file
 * Ntop : The number of top ranked DCA contacts to plot.
