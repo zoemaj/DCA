@@ -201,14 +201,16 @@ def preprocessing(input_name, output_name='', threshold=1.0,min_sim=0.0,max_sim=
                     if OX1==OX2:
                         OX=OX1
                         OX=str(OX)
-                        print("OX: ", OX)
+                        #print("OX: ", OX)
                     else:
                         print("problem")
                         print("OX1: ", OX1)
                         print("OX2: ", OX2)
-                        return
+                        #pass to the next sequene in the for loop
+                        continue
                 else:
                     OX=sequence[0]
+                    
                 
                 #find the node in the dictionary
                 if OX not in big_E_dic:
