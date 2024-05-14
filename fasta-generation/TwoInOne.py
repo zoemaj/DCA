@@ -5,14 +5,18 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+import itertools
 
 def create_dictionary_of_operon_id(line,OLN_index,ORF_index):
     
     dictionary_of_ids={}
     ox_found=False
-    if line[OLN_index]!="None":
+    if line[OLN_index]!=" None":
         ox_found=True
-        OLNs=line[OLN_index].split(" ")
+        #be sure to not have space before and after the string
+        line_OLN=line[OLN_index].strip()
+        OLNs=line_OLN.split(" ")
+
         for OLN in OLNs:
             if "/" in OLN:
                 #check if there is a "/" because: "If two predicted genes have been merged to form a new gene, both OLNs are indicated, separated by a slash"
@@ -35,9 +39,10 @@ def create_dictionary_of_operon_id(line,OLN_index,ORF_index):
                 else:
                     dictionary_of_ids[id].append(operon_id)
 
-    if line[ORF_index]!="None":
+    if line[ORF_index]!=" None":
         ox_found=True
-        ORFs=line[ORF_index].split(" ")
+        line_ORF=line[ORF_index].strip()
+        ORFs=line_ORF.split(" ")
         for ORF in ORFs:
             if "/" in ORF:
                 two_ORF=ORF.split("/")
@@ -172,6 +177,7 @@ def sort_sequences(fasta_file,file_name=None):
             line_with_OX = next((line for line in lines[1:] if int(line[OX_index]) == int(OX)), None) #find the line with the same OX number, if not found return None
             #print("Line with OX: ",line_with_OX)
             if line_with_OX != None:
+                
                 dictionary_of_ids,ox_found=create_dictionary_of_operon_id(line_with_OX,OLN_index,ORF_index)
                 id=line_with_OX[organism_id]
             #else:
@@ -223,7 +229,23 @@ def find_sequential_ordering_gene(chain):
 
     return id,numbers
 
-def TwoInOne(fastafile_one,fastafile_two):
+def compute_max_sim(seq,seqs):
+    '''
+    This function will compute the maximum similarity between the sequence seq and the sequences in seqs
+    this means will compare each character
+    '''
+    max_sim=0
+    for seq2 in seqs:
+        score=0
+        for i in range(len(seq)):
+            if seq[i]==seq2[i]:
+                score+=1
+        sim=score/len(seq)
+        if sim>max_sim:
+            max_sim=sim
+    return max_sim
+
+def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
 
     ''' 
     This function will combine two fasta files be combining the sequence of the same organism
@@ -406,88 +428,64 @@ def TwoInOne(fastafile_one,fastafile_two):
                     random_number=1.e9
                 else:
                     random_number=distanceMax
+                #one sequence can be pairing two or more sequences! we need to change n
+                k1=len(organism_one[key])
+                k2=len(organism_two[key])
+                #we have for each organism_one k2 possibilities of pairing and for each organism_two k1 possibilities of pairing
+                n=2*k1*k2
+                min_n_distance = {k: [random_number, random_number, random_number, "None"] for k in range(n)}
+                #organism_one[key] and organism_two[key] are lists of [number_name,OX,OS,organism_name,sequence_prot,dictionary_of_ids]
+                #we put in operons_id_one and operons_id_two the list of the different elements in dictionary_of_ids
+                operons_id_one = [key_id for sublist in organism_one[key] for key_id in sublist[5]]
+                operons_id_two = [key_id for sublist in organism_two[key] for key_id in sublist[5]]
+                common_strand = set(operons_id_one).intersection(operons_id_two) #set of the common elements in the two lists
                 
-                #min_n_distance is a dictionary of maximum n list with [distance,position i, position j,strand], the key are 1,2,3,...,n
-                min_n_distance={}
-                for k in range(n): #start with big values
-                    min_n_distance[k]=[random_number,random_number,random_number,"None"] #where are stock the minimal distance
-                    #the second argument corresponds to the ith element of organism_one[key][i]
-                    #the third argument corresponds to the jth element of organism_two[key][j]
-                
-                #lists with the different strand for the two proteins:
-                operons_id_one=[]
-                operons_id_two=[]
-                #find the organisms that have the closest distanced, extract all the dictionary_of_ids for the two proteins with key=organism_id
-                for i in range(len(organism_one[key])):
-                    #for example: {'b': [2614], 'JW': [2594]} -> we want 'b' and 'JW'
-                    for key_id in organism_one[key][i][5].keys():
-                        operons_id_one.append(key_id)
-                for i in range(len(organism_two[key])):
-                   for key_id in organism_two[key][i][5].keys():
-                        operons_id_two.append(key_id)
-                    
-                #find the common strand between organism_one and organism_two (and organism name == key)
-                common_strand = filter(lambda x: x in operons_id_one, operons_id_two)
-                common_strand=list(common_strand)
+                for strand in common_strand: #look only for the common strand
+                    for i, j in itertools.product(range(len(organism_one[key])), range(len(organism_two[key]))): #for every organism_one[key] and organism_two[key]
+                        number_i=organism_one[key][i][0]
+                        number_j=organism_two[key][j][0]
+                        #itertools.product is used to have all the possible pairs of i and j
+                        if strand in organism_one[key][i][5] and strand in organism_two[key][j][5]: #if we wand two pairs with this strand
+                            list_one = organism_one[key][i][5][strand] #we take the different numbers
+                            list_two = organism_two[key][j][5][strand]
+                            #we compute all the distances between the different numbers
+                            min_n_distance_ij = sorted(abs(operon_position - operon_position_two)
+                                                    for operon_position, operon_position_two in itertools.product(list_one, list_two))
 
-                for strand in common_strand:    #find the minimals distance possible
-                    for i in range(len(organism_one[key])):
-                        if organism_one[key][i][5].get(strand)!=None: #if the strand is the key
-                            list_one=organism_one[key][i][5][strand] #list of operon_id for this strand and this organism
-                            for j in range(len(organism_two[key])):
-                                min_n_distance_ij=[]
-                                if organism_two[key][j][5].get(strand)!=None: #if the strand is the key
-                                    list_two=organism_two[key][j][5][strand] #list of operon_id for this strand and this organism
-                                    #extract the minimal distance possible between
-                                    for operon_position in list_one:
-                                        for operon_position_two in list_two:
-                                            min_n_distance_ij.append(abs(operon_position-operon_position_two))
-                                    #sort the list of distances with the smallest first
-                                    min_n_distance_ij=sorted(min_n_distance_ij)
-                                    
-                                    #keep the min distance that are smallest than in min_n_distance (for loop on the keys)
-                                    for k in range(n):
-                                        # check if there are values in min_n_distance_ij that are smaller than min_n_distance[k]
-                                        if min_n_distance_ij[0]<min_n_distance[k][0]:
-                                            #decalage des valeurs de min_n_distance 
-                                            for l in range(n-1,k,-1): #from n-1 to k+1
-                                                min_n_distance[l]=min_n_distance[l-1]
-                                            #remplace min_n_distance[k][0] by min_n_distance_ij[0]
-                                            min_n_distance[k]=[min_n_distance_ij[0],i,j,strand]
-                                            #remove the min_n_distance_ij[0] from the list
-                                            min_n_distance_ij.remove(min_n_distance_ij[0])  #to look for the next smallest values
-                                            if len(min_n_distance_ij)==0:
-                                                break
-                
+                            min_n_distance_keys=list(min_n_distance.keys())
+                            numbers_keys=len(min_n_distance_keys)
+                            for k in min_n_distance_keys: #for every position in min_n_distance
+                                entry=min_n_distance[k][0] #we look the first element corresponding to the distance
+                                if min_n_distance_ij[0] < entry: #if the minimaldistance in min_n_distance_ij is smaller than this element
+                                    #shift the values of min_n_distance to the right
+                                    for l in range(numbers_keys-1,k,-1):
+                                        min_n_distance[l] = min_n_distance[l-1]
+                                    #now it is the smallest distance for the ith organism_one[key] and the jth organism_two[key]
+                                    min_n_distance[k] = [min_n_distance_ij[0], i, j, strand, number_i, number_j]
+                                    min_n_distance_ij.pop(0) #to look for the next smallest values
+                                    if len(min_n_distance_ij)==0: #if we have no more values in min_n_distance_ij
+                                        break                       
+                #remove the random number remaining
                 for el in range(len(min_n_distance)):
-                    
-                    if int(min_n_distance[el][0])==int(random_number): #this means than all the others t0o
-                        #remove it
-                        #and delete the next ones
+                    if int(min_n_distance[el][0])==int(random_number): #this means than all the others to
                         for l in range(el,n):
                             del min_n_distance[l]
                         break
 
-
-
-                    
-                #check if min_n_distane is not empty:
-                if len(min_n_distance)>0:
-                    #print(f"Organism name: {key} with {n} pairs of sequences, the minimal distance are: {min_n_distance}")
-                    
-                    
-                    seqs=[]
-                    #extract the i and the j from min_n_distance 
-                    if how_many_keeped>0:
+                if len(min_n_distance)>0:#if we have some pairings
+                    seqs=[] #we will extract a certain numbers of pairs
+                    if how_many_keeped>0: #if we know how many
                         max_k=min(len(min_n_distance),how_many_keeped)
-                    else:
+                    else: #if we have a distanceMax it is just all the pairs in min_n_distance
                         max_k=len(min_n_distance)
-                    #print("max_k=",max_k)
                     for k in range(max_k): #take only the best pairings
                         i=min_n_distance[k][1]
                         j=min_n_distance[k][2]
                         seq=str(organism_one[key][i][4]) + str(organism_two[key][j][4])+ "\n"
-                        if seq not in seqs: #to be sure to not have similar sequences
+                        #if seq not in seqs: #to be sure to not have similar sequences-> NEW VERSION
+                        #ADD THE SEQUENCE IF IT IS NOT MORE SIMILAR THAN max_sim
+                        max_sim_found=compute_max_sim(seq,seqs)
+                        if max_sim_found<max_sim:
                             seqs.append(seq)
                             output_handle.write(f">sp {organism_one[key][i][0]}-{organism_two[key][j][0]}_{organism_one[key][i][3]} organism={key} OS={organism_one[key][i][2]}-{organism_two[key][j][2]} OX={organism_one[key][i][1]}-{organism_two[key][j][1]}\n")
                             #take the seq of the protein, second argument of the list
@@ -495,21 +493,17 @@ def TwoInOne(fastafile_one,fastafile_two):
                         else:
                             #remove the pair (i,j):
                             #min_n_distance[0],...,min_n_distance[k-1],min_n_distance[k],min_n_distance[k+1],...,min_n_distance[n] becomes min_n_distance[0],...,min_n_distance[k-1],min_n_distance[k+1],...,min_n_distance[n]
-                            
                             del min_n_distance[k]
-                            #print("keys of min_n_distance after removing k: ",min_n_distance.keys())
-                            #if how_many_keeped>0:
-                            #    max_k=min(len(min_n_distance),how_many_keeped) #to take into account the fact that we remove one element
-                            #else:
-                            #    max_k=len(min_n_distance)
-                            #k-=1 #to take into account the fact that we remove one element
-                    n_pairs_per_organism[key]=[n,min_n_distance]
+                            
+                    min_n_distance_keys=list(min_n_distance.keys())
+                    min_n_distance=[[min_n_distance[k][0],min_n_distance[k][1],min_n_distance[k][2],min_n_distance[k][3],min_n_distance[k][4],min_n_distance[k][5]] for k in min_n_distance_keys]
+                    n_pairs_per_organism[key]=[len(min_n_distance),min_n_distance]
                     #print("n_pairs_per_organism: ",n_pairs_per_organism)
                                           
             else:  
                 for i in range(n): 
                     if organism_one[key][i][2]!=organism_two[key][i][2]:
-                        print(f"Organism name (OS) are different for the same OX {key} number: {organism_one[key][i][2]} and {organism_two[key][i][2]}")
+                        #print(f"Organism name (OS) are different for the same OX {key} number: {organism_one[key][i][2]} and {organism_two[key][i][2]}")
                         OS=organism_one[key][i][2]+"-"+organism_two[key][i][2]
                     else:
                         n_pairs_per_organism[key]=[n]
@@ -520,6 +514,8 @@ def TwoInOne(fastafile_one,fastafile_two):
     
     #---------------–--------------------------------------------------#
     organisms=[key for key in n_pairs_per_organism.keys()]
+    #have a list of str
+    organisms=[str(organism) for organism in organisms]
     
     #n_pairs_per_organism=dictionary with as key, the organisms names, and as values the lists [n_tot,n_keeped,min_n_distance]
     n_tot=[n_pairs_per_organism[key][0] for key in organisms]
@@ -530,10 +526,12 @@ def TwoInOne(fastafile_one,fastafile_two):
     #id=[i for i in id if n_organisms[i]>5]
     organisms=[organisms[i] for i in id] 
     n_tot=[n_tot[i] for i in id]
-
-    if operons=="yes":
-        min_n_distance=[n_pairs_per_organism[key][1] for key in organisms]    
-        min_n_distance=[min_n_distance[i] for i in id] #min_n_distance is a list of n_pairs_per_organism[key][1] for key in organisms -> we have [distance1,distance2,...,distance_n]
+    if n_tot==[]:
+        print("No organism pair found")
+        return
+    #if operons=="yes":
+        #min_n_distance=[n_pairs_per_organism[key][1] for key in organisms]    
+        #min_n_distance=[min_n_distance[i] for i in id] #min_n_distance is a list of n_pairs_per_organism[key][1] for key in organisms -> we have [distance1,distance2,...,distance_n]
 
     #save in a text file the number of pairs of sequences per organism
     if overwrite=="yes":
@@ -543,25 +541,33 @@ def TwoInOne(fastafile_one,fastafile_two):
                 #print("Organism: ",organisms[i])
                 #print("min_n_distance: ",min_n_distance[i])
                 file.write(f"{organisms[i]}: {n_tot[i]}\n")
-                file.write("----------------------------------------- \n")
+                file.write("........................................ \n")
                 if operons=="yes":
                     file.write("Minimal distances between the operons: \n")
-                    keys_min_n_distance=min_n_distance[i].keys()
-                    for k in keys_min_n_distance:
+                    organism=organisms[i]
+                    min_n_distance_for_this_organism=n_pairs_per_organism[organism][1] #list of [distance,position i, position j,strand]
+                    #keys_min_n_distance=
+                    #for key in keys_min_n_distance:
                         #print("min_n_distance[i][k][3]: ",min_n_distance[i][k][3])
-                        
-                        file.write(f"strand {str(min_n_distance[i][k][3])}: ")
-                        file.write(f"{min_n_distance[i][k][0]}, ")
+                    for i in range(len(min_n_distance_for_this_organism)):
+                        distance=min_n_distance_for_this_organism[i][0]
+                        strand=min_n_distance_for_this_organism[i][3]
+                        number_prot1=min_n_distance_for_this_organism[i][4]
+                        number_prot2=min_n_distance_for_this_organism[i][5]
+                        file.write(f"strand {strand}, {number_prot1}-{number_prot2}: ")
+                        file.write(f"{distance}\n")
                     file.write("\n")
                 file.write("----------------------------------------- \n")
-
+                file.write("----------------------------------------- \n")
+    #print(n_tot)
+    #print("np.max(n_tot): ",np.max(n_tot))
     path_figure_1=path_figure+"_distribution_pairs_organism.png"
     plt.figure()
     #histogram with axis x the number of pairs of sequences and axis y the number of organisms with this number of pairs
     plt.hist(n_tot,bins=50)
     plt.xlabel("Number of pairs of sequences")
     plt.ylabel("Number of organisms")
-    plt.xlim(0,max(n_tot)+1)
+    plt.xlim(0,np.max(n_tot)+1)
     plt.grid()
     plt.savefig(path_figure_1)
     plt.show()
@@ -574,20 +580,18 @@ def TwoInOne(fastafile_one,fastafile_two):
             min_n_distance_k={}
             organisms_k={}
             for i in range(len(organisms)):
-                keys_min_n_distance=min_n_distance[i].keys()
+                organism=organisms[i]
+                min_n_distance_for_this_organism=n_pairs_per_organism[organism][1] #list of [distance,position i, position j,strand]
                 #keep only the max_k first keys
-                keys_min_n_distance=[k for k in keys_min_n_distance if k<how_many_keeped]
-                for k in keys_min_n_distance:
-                    #sometimes min_n_distance[i][n] is empty if n>n_tot[i]
-                    #we need to remove it from the list
-                    #min_n_distance_n=[min_n_distance[i][n][0] for i in range(len(organisms)) if len(min_n_distance[i])>=n]
-                    try: #not sure if min_n_distance[i][k] exist
-                        #min_n_distance_k.append(int(min_n_distance[i][k][0]))
-                        #organisms_k.append(organisms[i])
-                        min_n_distance_k[k]=min_n_distance_k.get(k,[])+[int(min_n_distance[i][k][0])] #list of the distance for the kth best pairing
-                        organisms_k[k]=organisms_k.get(k,[])+[organisms[i]]
-                    except:
-                        pass
+                max_k=min(len(min_n_distance_for_this_organism),how_many_keeped)
+                for k in range(max_k):
+                    distance=min_n_distance_for_this_organism[k][0]
+                    if min_n_distance_k.get(k)==None:
+                        min_n_distance_k[k]=[distance]
+                        organisms_k[k]=[organism]
+                    else:
+                        min_n_distance_k[k].append(distance)
+                        organisms_k[k].append(organism)
             for k in min_n_distance_k.keys():
                 if min_n_distance_k[k]!=[]:
                     path_figure_k=path_figure+"_distance_"+str(k+1)+".png"
@@ -604,12 +608,12 @@ def TwoInOne(fastafile_one,fastafile_two):
             min_n_distance_k=[]
             organisms_k=[]
             for i in range(len(organisms)):
-                keys_min_n_distance=min_n_distance[i].keys()
-                for k in keys_min_n_distance:
-                    #print("min_n_distance[i][k][0]: ",min_n_distance[i][k][0])
-                    if int(min_n_distance[i][k][0])<int(distanceMax):
-                        min_n_distance_k.append(int(min_n_distance[i][k][0]))
-                        organisms_k.append(organisms[i])
+                organism=organisms[i]
+                min_n_distance_for_this_organism=n_pairs_per_organism[organism][1]
+                for k in range(len(min_n_distance_for_this_organism)):
+                    distance=min_n_distance_for_this_organism[k][0]
+                    min_n_distance_k.append(distance)
+                    organisms_k.append(organism)
             if min_n_distance_k!=[]:
                 path_figure_k=path_figure+"_distance.png"
                 plt.figure()
