@@ -1,6 +1,6 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
-import tqdm
+from tqdm import tqdm
 
 def convertissor(stockolm_file):
     print("Converting the stockolm file to fasta...")
@@ -32,37 +32,48 @@ def convertissor(stockolm_file):
     return file_name+".fasta"
 
 def gap_to_remove(seq,fasta_file,seq_init=0,seq_end=0):
-    gap_to_remove=[]
-    if seq_end==0:
-        seq_end=len(seq)
-    #print("seq=",seq)
-    with open("seq_id.txt","w") as file:
-        for i in range(len(seq)):
-            if int(i)<int(seq_init) or int(i)>int(seq_end):
+    gap_to_remove = []
+    if seq_end == 0:
+        seq_end = len(seq)
+    
+    indices_to_write = []
+    with open("seq_id.txt", "w") as file:
+        for i, char in enumerate(seq):
+            if seq_init <= i <= seq_end or char == "-":
                 gap_to_remove.append(i)
-                #wrrite the index of the gap to remove in a file
-                file.write(str(i)+"\n")
-            elif seq[i] == "-":
-                gap_to_remove.append(i)
-                #wrrite the index of the gap to remove in a file
-                file.write(str(i)+"\n")
+                indices_to_write.append(str(i))
+        file.write("\n".join(indices_to_write))
 
+        
+
+    new_records = []
     #remove each character of index in gap_to_remove from the sequences in the fasta file. Name this new file ..._new.fasta
     with open(fasta_file, "r") as handle:
         records = list(SeqIO.parse(handle, "fasta")) #list of sequences
         #delete each character of index in gap_to_remove from the sequences in the fasta file bip.fasta
-        for record in tqdm.tqdm(records):
+        for record in tqdm(records):
         #for record in records:
-            record.seq = "".join([record.seq[i] for i in range(len(record.seq)) if i not in gap_to_remove])
+            new_seq = "".join([record.seq[i] for i in range(len(record.seq)) if i not in gap_to_remove])
             #define record.seq as a sequence Seq
-            record.seq = Seq(str(record.seq))
-            
-        path=fasta_file.split("/")[:-1]
-        path="/".join(path)
-        new_name_file=path+"/"+fasta_file.split("/")[-1].split(".")[0]+"_new.fasta"
-        with open(new_name_file, "w") as handle:
-            SeqIO.write(records, handle, "fasta")
-        print("new fasta file created in the same folder as the original fasta file: ", new_name_file)
+            new_record = record
+            new_record.seq = Seq(new_seq)
+            new_records.append(new_record)
+    
+    new_name_file = f"{fasta_file.rsplit('.', 1)[0]}_new.fasta"
+    
+    with open(new_name_file, "w") as handle:
+        SeqIO.write(new_records, handle, "fasta")
+    
+    print("New FASTA file created:", new_name_file)
+    #        record.seq = Seq(str(record.seq))
+    #        
+    #    path=fasta_file.split("/")[:-1]
+    #    path="/".join(path)
+    #    new_name_file=path+"/"+fasta_file.split("/")[-1].split(".")[0]+"_new.fasta"
+    #    print("seq1 without gap:",records[0].seq)
+    #    with open(new_name_file, "w") as handle:
+    #        SeqIO.write(records, handle, "fasta")
+    #    print("new fasta file created in the same folder as the original fasta file: ", new_name_file)
 
 def execute(seq_base,fasta_file):
     ''' 
@@ -74,6 +85,7 @@ def execute(seq_base,fasta_file):
     '''
     print("in execute")
     #put in upper case all sequence in the fasta file bip
+    print("Treatment of the fasta file...")
     with open(fasta_file, "r") as handle:
         records = list(SeqIO.parse(handle, "fasta"))
         for record in records:
@@ -84,12 +96,15 @@ def execute(seq_base,fasta_file):
     #take seq (should correspond to the one given by seq_base) as the first sequence in the fasta file construction-fasta/bip.fasta
     with open(fasta_file, "r") as handle:
         records = list(SeqIO.parse(handle, "fasta"))
+        print("Number of sequences in the fasta file: ", len(records))
         seq = records[0].seq
 
     #compare seq_base with seq: remove all the "-" in seq. 
     seq_without_gap=seq.replace("-","")
+    print("seq_without_gap=",seq_without_gap)
     #compare amino by amino acid and put a gap in seq if the amino acid is different from seq_base
     #print(seq_without_gap)
+    print("Looking for the id start and id end....")
     if seq_base!=seq_without_gap:
         print("The sequences are different")
         if len(seq_base)<len(seq_without_gap):
@@ -115,36 +130,35 @@ def execute(seq_base,fasta_file):
                     #count the number of same caracters than seq_without_gap[seq_init] before seq_without_gap[seq_init]-1
                     count_start=0
                     count_end=0
-                    for i in range(0,seq_init,1):
-                        if seq_without_gap[i]==seq_without_gap[seq_init]:
-                            count_start+=1
+                    nb_c=0
+                    i=0
+                    print("id start...")
+                    while nb_c<=seq_init: #stop when we find the good numbers of characters
+                        count_start+=1
+                        i+=1
+                        #check if we have a gap
+                        if seq[i]=='-':
+                            continue
+                        else: #we have a character
+                            nb_c+=1 
+                        
 
-                    #in the opposite direction for count_end, from the end to seq_end
-                    #will go from len(seq_without_gap[seq_end:])+1 to len(seq_without_gap) included
-                    for i in range(seq_end+1,len(seq_without_gap),1):
-                        if seq_without_gap[i]==seq_without_gap[seq_end]:
-                            count_end+=1
-                    
+                    nb_c=0
+                    i=len(seq)-1
+                    print("id end...")
+                    while nb_c<=len(seq_without_gap)-seq_end: #stop when we find the good numbers of characters
+                        count_end+=1
+                        i-=1
+                        #check if we have a gap
+                        if seq[i]=='-':
+                            continue
+                        else:
+                            nb_c+=1
+                        
 
-        
-                    for i in range(len(seq)): #stop when seq[i] correspond to seq_without_gap[seq_init-1] after count_start
-                        if seq[i]==seq_without_gap[seq_init]:
-                            if count_start==0:
-                                seq_init=i
-                                break
-                            count_start-=1
-        
-
-                
-                    
-                    #find the index in seq corresponding to the count_end eme element before seq_without_gap[seq_end-1] that is == to seq_without_gap[seq_end-1]
-                    # in the opposite direction 
-                    for i in range(len(seq)-1,-1,-1):
-                        if seq[i]==seq_without_gap[seq_end]:
-                            if count_end==0:
-                                seq_end=i
-                                break
-                            count_end-=1
+                    seq_init=count_start
+                    seq_end=len(seq)-count_end+1
+                    print("first sequence remained:",seq[seq_init:seq_end])
                     
                     gap_to_remove(seq,fasta_file, seq_init,seq_end)
                     
