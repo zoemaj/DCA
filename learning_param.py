@@ -1,5 +1,5 @@
    
-def execute(epochs, batchs, model_type, n_models, seed, output_name, optimizer="/",separation="/",nb_hidden_neurons="0"):
+def execute(epochs, batchs, model_type, n_models, seed, output_name, activation="square",nb_hidden_neurons=32,optimizer="/",separation="/"):
     '''  save as a .csv file the different parameters 
     input: epochs -> int
     batchs -> int
@@ -8,23 +8,28 @@ def execute(epochs, batchs, model_type, n_models, seed, output_name, optimizer="
     list_dataset -> list of 3 bool elements corresponding to [val, test]
     output: a file named as output_name.txt
     '''
-
+    #check that output_name has an extension .text
+    try:
+        if output_name[-4:]!=".txt":
+            output_name=output_name+".txt"
+            pass
+    except:
+        pass
     # create the csv file
-    file = open(output_name+".txt", "w")
+    file = open(output_name, "w")
     # write the parameters
     file.write("epochs: "+str(epochs)+"\n")
     file.write("batchs: "+str(batchs)+"\n")
     file.write("model_type: "+str(model_type)+"\n")
     file.write("n_models: "+str(n_models)+"\n")
+    file.write("activation: "+str(activation)+"\n")
     file.write("nb_hidden_neurons: "+str(nb_hidden_neurons)+"\n")
     file.write("seed: "+str(seed)+"\n")
 
     #separation is loaded as "(int1,int1)" and we want to have int1:
     if separation=="/":
         separation=["0.7,0.7"]
-    #print(separation) #['0.7,0.7']
     separation=separation[0].split(",")
-    #print(separation) #['0.7', '0.7']
     separation[0]=float(separation[0])
     separation[1]=float(separation[1])
     if separation[1] < separation[0]:
@@ -47,14 +52,12 @@ def execute(epochs, batchs, model_type, n_models, seed, output_name, optimizer="
         optimizer=["SGD,0.008,0.01,0,0"]
     #write optimizer name : [the parameters separated by comma]
     optimizer=optimizer[0].split(",")
-    #if optimizer[0] is not "Adam" or "AdamW" or "SGD" or "Adagrad" or "Adadelta" return
     name_optimizer=optimizer[0]
 
     optimizer_recognized={}
     optimizer_recognized["Adam"]={}
     if optimizer[0]=="Adam":
         optimizer_recognized["Adam"]["name"]="Adam"
-        #fill the dictionaries with the good parameters by taking in count the number of parameters in optimizer, if some of them are missed we fix default values:
         optimizer_recognized["Adam"]["lr"]=optimizer[1] if len(optimizer)>1 else 0.001
         optimizer_recognized["Adam"]["beta1"]=optimizer[2] if len(optimizer)>2 else 0.9
         optimizer_recognized["Adam"]["beta2"]=optimizer[3] if len(optimizer)>3 else 0.999
