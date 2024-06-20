@@ -5,8 +5,254 @@ import torch
 import os
 from tqdm import tqdm
 import gc
-#still in progress, need to change the ising 
 
+#####################################################################################################
+##################################### functions to compute the errors ###############################
+#####################################################################################################
+
+def ErrorZai(amino,true_amino,bias=False):
+    '''
+    This function compute the error of the prediction of the amino acid a 
+    input:
+            amino: the prediction of the amino acid a, shape (K)
+            true_amino: the true amino acid a, shape (K)
+    output:
+            error_ai: the error of the prediction of the amino acid a, shape (1,K)
+                    delta Z_a0, delta Z_a1, ..., delta Z_aK
+    '''
+   
+    K=true_amino.shape[0]
+    sum_exp_amino=np.sum(np.exp(amino))#apply np.exp on each element of amino and sum them
+    assert np.allclose(sum_exp_amino,np.zeros_like(sum_exp_amino))==False
+    delta_s_ai=np.zeros_like(true_amino)
+    for i in range(0,K):
+        if amino[i]!=0:
+            delta_s_ai[i]=abs(true_amino[i]-amino[i])/abs(amino[i])
+        else:
+            delta_s_ai[i]=0
+    delta_z_ai=np.reshape(delta_s_ai,(K,1))
+        
+    return delta_z_ai
+
+def ErrorWij_before_ising(model,L,K,device,length_prot1):
+    ''' 
+    Compute the error of Wa_i,b_j such that delta(W_a_i,b_j)=delta(Z_a_i(input with a_b_j=1 and the others 0))
+    '''
+    #diagonal matrix of shape (L*K,L*K)
+    input=torch.eye(L*K)
+    input=torch.reshape(input,(L*K,L*K))
+    input=input.to(device)
+    output_ai=torch.zeros((L*K,L*K))
+    N=L*K
+    #compute the error for each a_i
+    print("Error Wai,bj before ising...")
+    error_Wai_bj=ErrorBias(model,L,K,device)/L #divice each element by L
+    print("shape error_Wai_bj:",error_Wai_bj.shape)
+    print("length_prot1:",length_prot1)
+    print("Extract the Zai,bj...")
+    output_ai=model.masked_linear.linear(input) 
+    output_ai = torch.reshape(output_ai, (N,L, K))#reshape 
+    SoftMax=torch.nn.Softmax(dim=2) #apply softmax on the last dimension
+    output_ai = SoftMax(output_ai) #apply softmax
+    output_ai = torch.reshape(output_ai, (N, L*K)) 
+    output_ai=output_ai.detach().numpy()
+    print("done")
+    for seq in tqdm(range(0,N)):
+        for amino_id in range(0,L*K,K):
+            amino=output_ai[seq,amino_id:amino_id+K]
+            true_label=input[seq,amino_id:amino_id+K]
+            error_Wai_bj[amino_id:amino_id+K,seq]+=ErrorZai(amino,true_label)[:,0]
+    del output_ai
+    torch.cuda.empty_cache()
+    assert np.allclose(error_Wai_bj,np.zeros_like(error_Wai_bj))==False
+    return error_Wai_bj
+
+
+def ErrorBias(model,L,K,device):
+    #fow now consider the bias as the difference with the average
+    input=torch.zeros(L*K)
+    #put on the device
+    input=input.to(device)
+    model_on_device=model.to(device)
+    output=model_on_device.masked_linear.linear(input)
+    output = torch.reshape(output, (1,L, K))#reshape 
+    SoftMax=torch.nn.Softmax(dim=2)
+    output = SoftMax(output) #apply softmax
+    output = torch.reshape(output, (1, L*K)) 
+    output=output.detach().numpy()
+    input=input.detach().numpy()
+    input=input.reshape(1,L*K)
+    error_bias=np.zeros((L*K,1))
+    for a in tqdm(range(0,L*K,K)):
+        amino=output[0,a:a+K]
+        true_label=input[0,a:a+K]
+        delta_bias=ErrorZai(amino,true_label,bias=True) #delta Z_a0, delta Z_a1, ..., delta Z_aK
+        error_bias[a:a+K]=delta_bias
+    del output
+    torch.cuda.empty_cache()
+    error_bias_final=np.repeat(error_bias,L*K,axis=1)
+
+    return error_bias_final
+
+
+def ErrorWij_after_ising(error_Wij_before_ising,data_per_col,L,K,length_prot1):
+    print("Error Wai,bj after ising...")
+
+    ErrorWij_after_ising=np.zeros((L*K,L*K))
+
+    sum_over_i=np.zeros(L*K) 
+    sum_over_j=np.zeros(L*K) #sum_over_j[0] correspond to the amino 0 of value 0, sum_over_j[K-1] correspond to the amino 0 of value K-1, sum_over_j[K] correspond to the amino 1 of value 0, ...
+    for amino_id in range(0,L*K,K):
+        for value_amino in range(0,L*K):
+            sumi=np.sum(error_Wij_before_ising[amino_id:amino_id+K,value_amino],axis=0)
+            sum_over_i[value_amino]=sumi
+            sumj=np.sum(error_Wij_before_ising[value_amino,amino_id:amino_id+K],axis=0)
+            sum_over_j[value_amino]=sumj
+
+
+    if length_prot1==0:
+        for amino_i in tqdm(range(0,L*K)):
+            for amino_j in range(0,L*K):
+                if data_per_col[amino_i%K,amino_i//K]==0 and data_per_col[amino_j%K,amino_j//K]==0: #both are true so the amino is possible!
+                    amino_i_id=amino_i//K
+                    amino_j_id=amino_j//K
+                    K_a=np.sum(data_per_col[:,amino_i_id]!=1)
+                    K_a=int(K_a)
+                    K_b=np.sum(data_per_col[:,amino_j_id]!=1)
+                    K_b=int(K_b)
+                    sum_over_j_but_not_the_j_fixed=sum_over_j[amino_i]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_but_not_the_i_fixed=sum_over_i[amino_j]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_and_j_but_not_the_j_fixed=np.sum(sum_over_j[amino_i_id:(amino_i_id+K)]-error_Wij_before_ising[amino_i_id:(amino_i_id+K),amino_j])
+                    sum_over_i_and_j_but_not_the_i_and_j_fixed=sum_over_i_and_j_but_not_the_j_fixed-(sum_over_j[amino_i]-error_Wij_before_ising[amino_i,amino_j])
+                    ErrorWij_after_ising[amino_i,amino_j]=sum_over_i_and_j_but_not_the_i_and_j_fixed*abs(1.0/(K_a*K_b))
+                    ErrorWij_after_ising[amino_i,amino_j]+=sum_over_j_but_not_the_j_fixed*abs(1.0/(K_a*K_b)-1.0/K_b)
+                    ErrorWij_after_ising[amino_i,amino_j]+=sum_over_i_but_not_the_i_fixed*abs(1.0/(K_a*K_b)-1.0/K_a)
+                    ErrorWij_after_ising[amino_i,amino_j]+=error_Wij_before_ising[amino_i,amino_j]*abs(1.0/(K_a*K_b)-1.0/K_b-1.0/K_a+1.0)
+
+    else: #only attribute it for (amino_i,amino_j) in [0:length_prot1,length_prot1:] and [length_prot1:,0:length_prot1]
+        for amino_i in tqdm(range(0,length_prot1*K)):
+            for amino_j in range(length_prot1*K,L*K):
+                mask_amino_i=torch.tensor(data_per_col[amino_i%K,amino_i//K]==0)
+                mask_amino_j=torch.tensor(data_per_col[amino_j%K,amino_j//K]==0)
+                if mask_amino_i and mask_amino_j:
+                    amino_i_id=amino_i//K
+                    amino_j_id=amino_j//K
+                    K_a=np.sum(data_per_col[:,amino_i_id]!=1)
+                    K_a=int(K_a)
+                    K_b=np.sum(data_per_col[:,amino_j_id]!=1)
+                    K_b=int(K_b)
+
+                    sum_over_j_but_not_the_j_fixed=sum_over_j[amino_i]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_but_not_the_i_fixed=sum_over_i[amino_j]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_and_j_but_not_the_j_fixed=np.sum(sum_over_j[amino_i_id:amino_i_id+K]-error_Wij_before_ising[amino_i:amino_i+K,amino_j])
+                    sum_over_i_and_j_but_not_the_i_and_j_fixed=sum_over_i_and_j_but_not_the_j_fixed-(sum_over_j[amino_i]-error_Wij_before_ising[amino_i,amino_j])
+                    ErrorWij_after_ising[amino_i,amino_j]=sum_over_i_and_j_but_not_the_i_and_j_fixed*abs(1.0/(K_a*K_b))
+                    ErrorWij_after_ising[amino_i,amino_j]+=sum_over_j_but_not_the_j_fixed*abs(1.0/(K_a*K_b)-1.0/K_b)
+                    ErrorWij_after_ising[amino_i,amino_j]+=sum_over_i_but_not_the_i_fixed*abs(1.0/(K_a*K_b)-1.0/K_a)
+                    ErrorWij_after_ising[amino_i,amino_j]+=error_Wij_before_ising[amino_i,amino_j]*abs(1.0/(K_a*K_b)-1.0/K_b-1.0/K_a+1.0)
+
+                    #do also the same for the element (amino_j,amino_i)
+                    sum_over_j_but_not_the_j_fixed=sum_over_j[amino_j]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_but_not_the_i_fixed=sum_over_i[amino_i]-error_Wij_before_ising[amino_i,amino_j]
+                    sum_over_i_and_j_but_not_the_i_and_j_fixed=np.sum(sum_over_j[amino_j_id:amino_j_id+K])-error_Wij_before_ising[amino_i,amino_j]
+                    ErrorWij_after_ising[amino_j,amino_i]=sum_over_i_and_j_but_not_the_i_and_j_fixed*abs(1.0/(K_a*K_b))
+                    ErrorWij_after_ising[amino_j,amino_i]+=sum_over_j_but_not_the_j_fixed*abs(1.0/(K_a*K_b)-1.0/K_a)
+                    ErrorWij_after_ising[amino_j,amino_i]+=sum_over_i_but_not_the_i_fixed*abs(1.0/(K_a*K_b)-1.0/K_b)
+                    ErrorWij_after_ising[amino_j,amino_i]+=error_Wij_before_ising[amino_i,amino_j]*abs(1.0/(K_a*K_b)-1.0/K_b-1.0/K_a+1.0)
+
+
+            
+    #verify that the matrix is not null
+    assert np.allclose(ErrorWij_after_ising,np.zeros_like(ErrorWij_after_ising))==False
+    return ErrorWij_after_ising
+
+def ErrorWij_frobenius(error_Wij_after_ising,couplings_after_ising,couplings_after_frobenius,L,K,length_prot1):
+    print("Error Wai,bj frobenius...")
+    couplings_after_ising=0.5*(couplings_after_ising+couplings_after_ising.T) #force it to be symmetric
+    error_Wij_after_ising=0.5*(error_Wij_after_ising+error_Wij_after_ising.T) #force it to be symmetric
+    assert np.allclose(error_Wij_after_ising,np.zeros_like(error_Wij_after_ising))==False
+    #verify if the matrix is symmetric
+    assert np.allclose(couplings_after_ising,couplings_after_ising.T) #np.allclose is used to compare two arrays
+    assert np.allclose(error_Wij_after_ising,error_Wij_after_ising.T) #np.allclose is used to compare two arrays
+    #assert-> if the condition is false, it will raise an error
+    error_Wab=np.zeros((L,L))
+    if length_prot1==0:
+        for amino_a in tqdm(range(0,L*K)):
+            a=amino_a//K
+            for amino_b in range(0,L*K):
+                b=amino_b//K
+                if couplings_after_ising[amino_a,amino_b]!=0:
+                    error=abs(couplings_after_ising[amino_a,amino_b])*error_Wij_after_ising[amino_a,amino_b]
+                    error_Wab[a,b]+=error
+        assert np.allclose(error_Wab,error_Wab.T) #after the first forloop ->oke!
+        for a in range(0,L):
+            for b in range(0,L):
+                if error_Wab[a,b]!=0 and couplings_after_frobenius[a,b]!=0:
+                    error_Wab[a,b]=error_Wab[a,b]/couplings_after_frobenius[a,b]
+    else:
+        #only attribute it for (amino_i,amino_j) in [0:length_prot1,length_prot1:] and [length_prot1:,0:length_prot1]
+        for amino_i in tqdm(range(0,length_prot1*K)):
+            for amino_j in range(length_prot1*K,L*K):
+                a=amino_i//K
+                b=amino_j//K
+                if couplings_after_ising[amino_i,amino_j]!=0:
+                    error=abs(couplings_after_ising[amino_i,amino_j])*error_Wij_after_ising[amino_i,amino_j]
+                    error_Wab[a,b]+=error
+                    error_Wab[b,a]+=error
+
+        for a in range(0,length_prot1):
+            for b in range(length_prot1,L):
+                if error_Wab[a,b]!=0 and couplings_after_frobenius[a,b]!=0:
+                    error_Wab[a,b]=error_Wab[a,b]/couplings_after_frobenius[a,b]
+                    error_Wab[b,a]=error_Wab[a,b]
+
+    
+    assert np.allclose(error_Wab,error_Wab.T) #after the second forloop
+    assert np.allclose(error_Wab,np.zeros_like(error_Wab))==False
+    return error_Wab
+
+def ErrorWij_average_product(errorWab,couplings_after_average_product,L,length_prot1):
+    assert np.allclose(errorWab,errorWab.T) #oke
+    print("Error Wai,bj average product...")
+    sum_fixed_alpha_over_beta=np.zeros(L)
+    sum_fixed_beta_over_alpha=np.zeros(L)
+    for amino_id in range(L):
+        sum_fixed_alpha_over_beta[amino_id]=np.sum(couplings_after_average_product[amino_id,:])
+        sum_fixed_beta_over_alpha[amino_id]=np.sum(couplings_after_average_product[:,amino_id])
+        #should find the same if symmetric
+        assert np.allclose(sum_fixed_alpha_over_beta[amino_id],sum_fixed_beta_over_alpha[amino_id]) #oke
+    sum_over_alpha_over_beta=np.sum(sum_fixed_alpha_over_beta) #constant
+    errorWab_new=np.zeros((L,L))
+    if length_prot1==0:
+        for alpha in tqdm(range(L)):
+            for beta in range(alpha,L,1):
+                errorWab_new[alpha,beta]=abs(1-2*sum_fixed_alpha_over_beta[alpha]*(sum_over_alpha_over_beta-sum_fixed_alpha_over_beta[alpha]))*errorWab[alpha,beta]
+                errorWab_new[alpha,beta]+=(2*sum_fixed_alpha_over_beta[alpha]*(sum_over_alpha_over_beta-2*sum_fixed_alpha_over_beta[alpha]))*errorWab[alpha,beta]
+                errorWab_new[alpha,beta]+=(sum_fixed_alpha_over_beta[alpha]**2/(sum_over_alpha_over_beta**2))*errorWab[alpha,beta]
+                errorWab_new[beta,alpha]=errorWab_new[alpha,beta]
+    else:
+        for alpha in tqdm(range(0,length_prot1)):
+            for beta in range(length_prot1,L):
+                errorWab_new[alpha,beta]=abs(1-2*sum_fixed_alpha_over_beta[alpha]*(sum_over_alpha_over_beta-sum_fixed_alpha_over_beta[alpha]))*errorWab[alpha,beta]
+                errorWab_new[alpha,beta]+=(2*sum_fixed_alpha_over_beta[alpha]*(sum_over_alpha_over_beta-2*sum_fixed_alpha_over_beta[alpha]))*errorWab[alpha,beta]
+                errorWab_new[alpha,beta]+=(sum_fixed_alpha_over_beta[alpha]**2/(sum_over_alpha_over_beta**2))*errorWab[alpha,beta]
+                errorWab_new[beta,alpha]=errorWab_new[alpha,beta]
+    assert np.allclose(errorWab_new,errorWab_new.T)
+    assert np.allclose(errorWab_new,np.zeros_like(errorWab_new))==False
+    return errorWab_new
+
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+
+
+    
+    
+
+
+#####################################################################################################
+####################### functions to extract the couplings ##########################################
+#####################################################################################################
 def prediction(input, model, model_type) :
     #for a linear model, the couplings are directly the weights learned
     if model_type == "linear" :
@@ -14,9 +260,7 @@ def prediction(input, model, model_type) :
     if model_type == "non-linear" : return model.non_linear(input)
     else : print("error with model type")   
 
-
-def extract_couplings_W3(model, model_type, original_shape, indexes_batch) :
-    
+def extract_couplings_W3(model, model_type, original_shape, indexes_batch,length_prot1) :
     (L,K) = original_shape
     #----------------------(1)--------------------------
     #extract one prediction for only zeros to have L*K output Z_ia=W1_ia
@@ -52,13 +296,8 @@ def extract_couplings_W3(model, model_type, original_shape, indexes_batch) :
 
     return W_ialpha_jbeta_kgamma
 
-def extract_couplings(model, model_type, original_shape,data_per_col,path) :
-    #if torch.cuda.is_available():
-    #    use_cuda = True
-    #else:
-    #    use_cuda = False
-    use_cuda=False #we don't use cuda for the moment
-    device = torch.device("cuda" if use_cuda else "cpu")
+def extract_couplings(model, model_type, original_shape,data_per_col,path,device,length_prot1) :
+   
     (L,K) = original_shape
     if model_type=="non-linear":
         print("Extract couplings for non-linear model...")
@@ -146,7 +385,7 @@ def extract_couplings(model, model_type, original_shape,data_per_col,path) :
                     indexe0=indexe_batch[0]-indexes_batch[0,0]
                     indexe1=indexe_batch[1]-indexes_batch[0,0]
                     #extraction of the couplings, we extract the L*K terms W_ialpha_jbeta_kgamma for every i, alpha, and jbeta given by indexe_batch[0], and kgamma given by indexe_batch[1] 
-                    W_ialpha_jbeta_kgamma=extract_couplings_W3(model, model_type, (L,K), indexe_batch) #DIMENSION: (1,L*K) 
+                    W_ialpha_jbeta_kgamma=extract_couplings_W3(model, model_type, (L,K), indexe_batch,length_prot1) #DIMENSION: (1,L*K) 
                     W_3_batch[:,indexe0,indexe1]=W_ialpha_jbeta_kgamma #DIMENSION: (L*K,batch_size*K,batch_size*K)
                     #now we need to complete the other half of the matrix
                     W_3_batch[:,indexe1,indexe0]=W_ialpha_jbeta_kgamma #DIMENSION: (L*K,batch_size*K,batch_size*K)
@@ -157,10 +396,6 @@ def extract_couplings(model, model_type, original_shape,data_per_col,path) :
                     print("shape W_3_batch before ising :",W_3_batch.shape)  
                 #now we need to apply ising gauge on W_3_batch
                 W_3_batch=ising_gauge_W3(W_3_batch, (L,K),indexes_batch,batch_size,data_per_col,device,Progression) # shape of W_3_batch: (L*K,batch_size*K,batch_size*K)
-                
-                #for indexe_batch in indexes_batchs: #we project every [i,[j,k]] to [i,j] for every k (and simitrically)
-                #    W_3_2d[:,indexe_batch[0]]=W_3_2d[:,indexe_batch[0]]+W_3_batch[:,indexe_batch[0],indexe_batch[1]]
-                #    W_3_2d[:,indexe_batch[1]]=W_3_2d[:,indexe_batch[1]]+W_3_batch[:,indexe_batch[1],indexe_batch[0]]
                 if Progression%5==0:
                     print("Extract W2...")
 
@@ -186,8 +421,6 @@ def extract_couplings(model, model_type, original_shape,data_per_col,path) :
                     sum_b[:,:,b_batch]=torch.where(mask,torch.sum(W_3_batch[:,:,j_batch:j_batch+K],axis=2),0)
                 
                 for a in range(L*K):
-                    #if a%((L*K)/8)==0:
-                    #    print("Progression:",a/(L*K)*100,"%")
                     K_a=np.sum(data_per_col[:,a//K]==0)
                     for b in range(indexes_batch[0,0],indexes_batch[0,0]+batch_size*K):
                         K_b=np.sum(data_per_col[:,b//K]==0)
@@ -196,7 +429,6 @@ def extract_couplings(model, model_type, original_shape,data_per_col,path) :
                             K_y=np.sum(data_per_col[:,y//K]==0)
                             y_batch=y-indexes_batch[0,0]
                             W2[a,b]=W2[a,b]+sum_a[a,b_batch,y_batch]/K_a+sum_b[a,b_batch,y_batch]/K_b+sum_y[a,b_batch,y_batch]/K_y
-                #convert W2 to a numpy array
                 W2=W2.detach().cpu().numpy()
                 np.save(os.path.join(path,"W2_0-"+str(id+batch_size*K-1)),W2.detach().cpu().numpy())
                 del W2
@@ -214,13 +446,20 @@ def extract_couplings(model, model_type, original_shape,data_per_col,path) :
     if model_type=="linear":
         print("Extract couplings for linear model...")
         W2 = prediction(torch.zeros(L*K), model, model_type)
+        if length_prot1!=0:
+            assert np.allclose(W2[0:length_prot1*K,0:length_prot1*K],np.zeros_like(W2[0:length_prot1*K,0:length_prot1*K]))
+            assert np.allclose(W2[length_prot1*K:,length_prot1*K:],np.zeros_like(W2[length_prot1*K:,length_prot1*K:]))
     return W2
+#####################################################################################################
+#####################################################################################################
 
-        
+#####################################################################################################
+####################### functions to apply the ising gauge ##########################################
+#####################################################################################################
+
+######################################### 3D #########################################################
 def ising_gauge_W3(couplings, original_shape,indexes_batch,batch_size,data_per_col,device,Progression):
     (L,K) = original_shape
-    
-    
     #------------------ (1) remove the single sums -----------------
     # we need to remove the sum over a of C_ia,jb,ky
     # we need to remove the sum over b of C_ia,jb,ky
@@ -326,127 +565,135 @@ def ising_gauge_W3(couplings, original_shape,indexes_batch,batch_size,data_per_c
     #DIMENSION new_couplings_3d=(LK,batch_size*K,batch_size*K)
     return new_couplings_3d
     
-
+######################################### 2D #########################################################
 def ising_gauge(couplings, original_shape, data_per_col,length_prot1) :
     """
     apply Ising gauge on the coupling coefficients
+    Inputs:
+            couplings       ->      the coupling coefficients
+                                    type: numpy array, shape: (L*K,L*K)
+            original_shape  ->      the original shape of the couplings
+                                    type: tuple, shape: (L,K)
+            data_per_col    ->      the data per column
+                                    type: numpy array, shape: (K,L) 
+            length_prot1    ->      the length of the first protein (if we used a cross-linear model)
+    Ouputs:
+            new_couplings   ->      the coupling coefficients after applying the Ising gauge
+                                    type: numpy array, shape: (L*K,L*K)
 
-    if model_type is "linear", only the second order Ising gauge is applies
-    if model_type is "non-linear" or "mix", both second and third order Ising gauge are applied
 
-    :param couplings: couplings coefficients on which ising gauge is needed
-    :type couplings: numpy array
-    :param model: pytorch model from which the couplings have been extracted
-    :type model: nn.Module
-    :param original_shape: original shape of the MSA (L,K)
-    :type original_shape: tuple of int
-    :return: coupling coefficients after Ising gauge
-    :rtype: numpy array
     """
     (L,K) = original_shape
+    print("original_shape:",original_shape)
+
     
     new_couplings = np.copy(couplings)
-    # Initialize arrays outside the loops
-    sum_row = np.zeros((L * K, L * K))
-    sum_col = np.zeros((L * K, L * K))
-    sum_rowcol = np.zeros((L * K, L * K))
-    print("--------- sum over b of C_ia,jb and sum over a of C_ia,jb -----------")
-    for i in range(0, L * K):  
-        col_i=i//K #exemple: i=0, K=2, k=0 | i=1, K=2, k=0 | i=2, K=2, k=1 | i=3, K=2, k=1
-        row_i=col_i
-        k=i%K #% take the modulo of i by K. exemple: i=0, K=2, k=0 | i=1, K=2, k=1 | i=2, K=2, k=0 | i=3, K=2, k=1
-        mask = (data_per_col[k, col_i] != 1) 
-        sum_col[:, i] = np.where(mask, np.sum(couplings[:, col_i:col_i + K], axis=1), 0)
-        sum_row[i, :] = np.where(mask, np.sum(couplings[row_i:row_i + K, :], axis=0), 0)
-    print("--------- sum over a,b of C_ia,jb -----------")
-    for j in range(0, L * K):
-        for i in range(0, L * K):
-            col_i=i//K
-            k_i=i%K
-            row_j=j//K
-            k_j=j%K
-            mask_row = (data_per_col[k_i, col_i] != 1)
-            mask_col = (data_per_col[k_j, row_j] != 1)
-            sum_rowcol[j, col_i:col_i+K] = np.sum(sum_row[j, col_i:col_i+K])
-            sum_rowcol[j, col_i:col_i+K] = np.where(mask_row & mask_col, sum_rowcol[j, col_i:col_i+K], 0)
+    
+    #verify that couplings.shape=(L*K,L*K)
+    try:
+        assert couplings.shape==(L*K,L*K)
+    except:
+        print(f"Error: couplings.shape should be ({L*K},{L*K}) but is {couplings.shape}")
+        return
+    
+    print("--------- sum over beta of C_ialpha,jbeta and sum over aalpha of C_ialpha,jbeta -----------")
+    sum_alpha_fixed_beta_from_0_to_k=np.zeros((L*K,L)) #in row the position alpha, in column the position j
+    sum_beta_fixed_alpha_from_0_to_k=np.zeros((L*K,L)) #in row the position beta, in column the position i
+    for alpha in range(0, L * K):  #new 22mai
+        for j in range(0, L):
+            sum_alpha_fixed_beta_from_0_to_k[alpha,j]=np.sum(couplings[alpha,j*K:(j*K+K)]) #sum over b for a fixed a
+            #we have also the inverse for alpha -> beta and j -> i
+            sum_beta_fixed_alpha_from_0_to_k[alpha,j]=np.sum(couplings[j*K:(j*K+K),alpha]) #sum over a for a fixed b
+            
+    print("--------- sum over alpha,beta of C_ialpha,jbeta -----------")
+    sum_alpha_from_0_to_k_beta_from_0_to_k=np.zeros((L,L)) #in row the position i, in column the position j
+    for i in range(0, L):
+        for j in range(0,L):
+            sum_alpha_from_0_to_k_beta_from_0_to_k[i,j]=np.sum(sum_alpha_fixed_beta_from_0_to_k[i*K:(i*K+K),j]) #sum over alpha of every sum_alpha_fixed_beta_from_0_to_k
+
     print("--------- computing the new_couplings -----------")
     if length_prot1==0:
-        for j in range(L * K):
-            for i in range(L * K):
-                col_i=i//K
-                k_i=i%K
-                row_j=j//K
-                k_j=j%K
-                K_beta = np.sum(data_per_col[:, col_i] == 0)
-                K_alpha = np.sum(data_per_col[:, row_i] == 0)
-                new_couplings[j, i] = (
-                    new_couplings[j, i] - sum_row[j, i] / K_alpha
-                    - sum_col[j, i] / K_beta
-                    + sum_rowcol[j, i] / (K_alpha * K_beta)
-                )
+        for alpha in range(L * K):
+            for beta in range(L * K):
+                i=alpha//K
+                j=beta//K
+                K_alpha = np.sum(data_per_col[:, i] == 0)
+                K_beta = np.sum(data_per_col[:, j] == 0)
+                if data_per_col[alpha % K, i] == 0 and data_per_col[beta % K, j] == 0:
+                    new_couplings[alpha, beta] = couplings[alpha,beta]-sum_alpha_fixed_beta_from_0_to_k[alpha,j]/K_alpha-sum_beta_fixed_alpha_from_0_to_k[beta,i]/K_beta+sum_alpha_from_0_to_k_beta_from_0_to_k[i,j]/(K_alpha*K_beta)
+                else:
+                    new_couplings[alpha, beta] = 0         
     else:
-        for j in range(0,length_prot1 * K):
-            for i in range(length_prot1 * K,L*K):
-                col_i=i//K
-                k_i=i%K
-                row_j=j//K
-                k_j=j%K
-                K_beta = np.sum(data_per_col[:, col_i] == 0)
-                K_alpha = np.sum(data_per_col[:, row_i] == 0)
-                new_couplings[j, i] = (
-                    new_couplings[j, i] - sum_row[j, i] / K_alpha
-                    - sum_col[j, i] / K_beta
-                    + sum_rowcol[j, i] / (K_alpha * K_beta)
-                )
-                new_couplings[i, j] = new_couplings[j, i]
+        for alpha in range(0,length_prot1*K):
+            for beta in range(length_prot1*K,L):
+                i=alpha//K
+                j=beta//K
+                K_alpha = np.sum(data_per_col[:, i] == 0)
+                K_beta = np.sum(data_per_col[:, j] == 0)
+                if data_per_col[alpha % K, i] == 0 and data_per_col[beta % K, j] == 0:
+                    new_couplings[alpha, beta] = couplings[alpha,beta]-sum_alpha_fixed_beta_from_0_to_k[alpha,j]/K_alpha-sum_beta_fixed_alpha_from_0_to_k[beta,i]/K_beta+sum_alpha_from_0_to_k_beta_from_0_to_k[i,j]/(K_alpha*K_beta)
+                    new_couplings[beta, alpha] = new_couplings[alpha, beta]
+                else:
+                    new_couplings[alpha, beta] = 0
+                    new_couplings[beta, alpha] = 0
+                                 
     return new_couplings
-    
+#####################################################################################################
+#####################################################################################################
 
+
+#####################################################################################################
+####################### functions to correct the final couplings ####################################
+#####################################################################################################
 @jit(nopython=True, parallel=True) #parallelise using numba
-def average_product_correction(f) :
+def average_product_correction(f,length_prot1) :
     """
-    apply the average product correction on f, a numpy array containing the couplings,
-    and return the corrected f
-    :param f: array on which we want to apply the average product correction
-    :type f: numpy array
-    :return: f after average product correction
-    :rtype: numpy array
+    apply the average product correction on the couplings
+    input:
+            f           ->      the couplings
+                                type: numpy array, shape: (L*K,L*K)
+            length_prot1->      the length of the first protein (if we used a cross-linear model)
+                                type: int
     """
-    shape = f.shape
-    f_i_s = np.sum(f, 1)/(shape[1]-1)
-    f_j_s = np.sum(f, 0)/(shape[0]-1)
-    f_ = np.sum(f)/(shape[0]*(shape[1]-1))
-    for i in range(shape[0]) :
-        for j in range(shape[1]) :
-            if j!= i : f[i,j] = f[i,j]-f_i_s[i]*f_j_s[j]/f_    
+    sum_on_i=np.sum(f,0)
+    sum_on_j=np.sum(f,1)
+    sum_on_j_and_i=np.sum(f)
+    if length_prot1==0:
+        for i in range(f.shape[0]):
+            for j in range(f.shape[1]):
+                f[i,j]=f[i,j]-sum_on_i[j]*sum_on_j[i]/sum_on_j_and_i
+    else:
+        for i in range(0,length_prot1):
+            for j in range(length_prot1,f.shape[1]):
+                f[i,j]=f[i,j]-sum_on_i[j]*sum_on_j[i]/sum_on_j_and_i
+                f[j,i]=f[j,i]-sum_on_i[i]*sum_on_j[j]/sum_on_j_and_i
+    print("verify that average product is symmetric")
+    assert np.allclose(f,f.T)
     return f
+#####################################################################################################
+#####################################################################################################
     
-
+###########################################################################################################################################
+#********************************************** MAIN FUNCTION *****************************************************************************
+########################################################################################################################################### 
 def couplings(model_name, length_prot1=0, number_model=1, type_average='average_couplings', output_name='/', figure=False, data_per_col='/', model_type="linear",L=0,K=0) :
-
+    print("-------- Welcome in the couplings process :) --------")
+    print("-----------------------------------------------------")
+    use_cuda=False #we don't use cuda for the moment
+    device = torch.device("cuda" if use_cuda else "cpu")
     ###################################################################################
-    ################# EXTRACTION OF THE MODEL(S) ######################################
+    ################# EXTRACTION OF THE MODEL(S) PATH(S) ##############################
     ############ & data_per_col (the same for every model(s)) #########################
+    ########################## & output_name ##########################################
     ###################################################################################
-    
-    print("--------------------------------------------------------------------------")
-    print("Welcome in the couplings step, we are extracting the parameters...")
-
-    #models=[]
+    print("-----------------------------------------------------")
+    print("Extraction of the parameters...")
     number_model=int(number_model)
-    #if number_model>1:
-     #   print("------------------ several models ------------------")
-     #   print("------------- extraction of the models --------------")
-      #  for m in range(number_model):
-      #      print("model_name:", model_name+'_' + str(m))
-      #      models.append(torch.load(model_name+'_' + str(m)))
-    #else:
-    print("-------------------- one model ---------------------")
-    #    print("------------- extraction of the model --------------")
-    #    models.append(torch.load(model_name))
-    
     #extract the folder name (first part)
     path_folder=os.path.dirname(model_name)
+    if number_model==1:
+        print("one model")
+        index_model=os.path.basename(model_name).split('_')[-1]
     #load the data_per_col .txt file and convert it into a numpy array
     if data_per_col=="/":
         #take the path of the model_name and add the name 'data_per_col.txt' to it
@@ -464,10 +711,18 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
     elif K!=data_per_col.shape[0]:
         print("The data_per_col has a wrong shape, please check it (K should be",data_per_col.shape[0],")")
         return
+    
+    if output_name=="/":
+        #take the path of the model_name and add the name 'couplings' to it
+        output_name = os.path.dirname(model_name)
+        output_name = os.path.join(output_name, 'couplings')
     ###################################################################################
+    ###################################################################################
+
+    ###################################################################################
+    ######################### EXTRACTION OF L AND K ###################################
     ###################################################################################
     if L==0:
-        
         try:
             #find the element in model_name.split('/') starting with prep:
             threshold_preprocessed=[x for x in model_name.split('/') if x.startswith('preprocessing')][0]
@@ -479,7 +734,6 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
             #check if endswith "gaps"
             if threshold_preprocessed.endswith("gaps"):
                 threshold_preprocessed=threshold_preprocessed[:-4] #remove the "gaps" at the end
-
         except:
             pass
         try:
@@ -492,8 +746,6 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
             threshold_preprocessed=float(threshold_preprocessed)
             path_info=input("Please enter the path where to find the file with the information about N,L,K:  ")
 
-        
-        
         #we don't know if it is with tax or not
         with open(os.path.join(path_info), 'r') as file:
             print("in the file:", path_info)
@@ -504,6 +756,7 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
                 if line==f"preprocessing with gap threshold of {threshold_preprocessed*100} %\n":
                     L=lines[i+1].split(',')[3]
                     L=int(L)
+                    
                     K_good=lines[i+1].split(',')[4]
                     K_good=K_good.split(')')[0]
                     K_good=int(K_good)
@@ -511,20 +764,17 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
                         print(f"The data_per_col has a wrong shape, please check it (K should be {K_good})")
                         return
                     break
-
-    ###################################################################################
-    
-
     print("L,K:(",L,",",K,")")
     if K>21:
         print("K=",K,"-> we have the taxonomy for each sequence. In this case the L is the length of a sequence +1.")
-        
     
-    if output_name=="/":
-        #take the path of the model_name and add the name 'couplings' to it
-        output_name = os.path.dirname(model_name)
-        output_name = os.path.join(output_name, 'couplings')
-
+    ###################################################################################
+    ###################################################################################
+    
+    ###################################################################################
+    ################# EXTRACTION OF LENGTH_PROT1 AND LENGHT_PROT2 #####################
+    ############################# (if two proteins) ###################################
+    ###################################################################################
     if length_prot1!=0:
         length_prot2=L-length_prot1
         print("---------------------------- TWO PROTEINS --------------------------------")
@@ -532,30 +782,173 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
         print("Length of the second protein:",length_prot2)
         print("--------------------------------------------------------------------------")
     ###################################################################################
+    ###################################################################################
+    
+    
+    
+    ###################################################################################
     ################# WEIGHT EXTRACTION AND ISING GAUGE FOR THE MODEL(S) ##############
     ################### (depend if we consider the taxonomy or not)####################
     ######################## (depend if it is linear or not)###########################
     ###################################################################################
-    
-    #createthe name
+    #createthe directory
     couplings_path = os.path.dirname(output_name) # Path for the couplings directory without the last 
-    #add the name 'couplings_before_ising' to the couplings_path
-    name_couplings_before = os.path.join(couplings_path, 'couplings_before_ising/')
-    ALL_couplings=[]
+    name_couplings_before = os.path.join(couplings_path, 'couplings_before_ising')
+    name_couplings_after = os.path.join(couplings_path, 'couplings_after_ising')
+    name_frobenius = os.path.join(couplings_path, 'couplings_frobenius')
+    name_average_product = os.path.join(couplings_path, 'average_product')
+    # saved the last part as the name of the file
+    output_name = os.path.basename(output_name)
+
+   
+
+    if number_model==1:
+        #add the name 'average-models' to the output_directory path
+        output_directory = os.path.join(couplings_path, 'average-models/')
+    else:
+        if type_average=="average_couplings_frob":
+            output_directory = os.path.join(couplings_path, 'average-models-and-frob/')
+        elif type_average=="average_couplings":
+            output_directory = os.path.join(couplings_path, 'average-couplings/')
+
+    # Create the directory and its parent directories if they don't exist
+    os.makedirs(name_couplings_before, exist_ok=True)
+    os.makedirs(name_couplings_after, exist_ok=True)
+    os.makedirs(name_frobenius, exist_ok=True)
+    os.makedirs(output_directory, exist_ok=True)
+    os.makedirs(name_average_product, exist_ok=True)
+    #########################################################################
+    ############################ error calculation ##########################
+    if number_model==1:
+        path_error_Wij_before=os.path.join(name_couplings_before, "error_Wij_"+index_model+"_before_ising.txt")
+        path_error_Wij_after= os.path.join(couplings_path, "couplings_after_ising/error_Wij_after_ising_"+index_model+".txt")
+    else:
+        path_error_Wij_before=os.path.join(name_couplings_before, "error_Wij_0-"+str(number_model-1)+"_before_ising.txt")
+        path_error_Wij_after= os.path.join(couplings_path, "couplings_after_ising/error_Wij_after_ising_0-"+str(number_model-1)+".txt")
+    if os.path.isfile(path_error_Wij_after) and os.path.isfile(path_error_Wij_before):
+        print("error_Wij_after_ising and error_Wij_before_ising already exist we don't compute them again")
+        print("path:",path_error_Wij_before)
+        print("path:",path_error_Wij_after)
+        average_error_after_Wij=np.loadtxt(path_error_Wij_after)
+    else:
+        find_average_error_Wij=False
+        if number_model==1 or type_average=="average_couplings":
+            if os.path.isfile(path_error_Wij_before):
+                print("error_Wij_before_ising already exists we don't compute it again")
+                average_error_Wij=np.loadtxt(path_error_Wij_before)
+                average_error_after_Wij=ErrorWij_after_ising(average_error_Wij,data_per_col,L,K,length_prot1)
+                print("shape of error_Wij_after:",average_error_after_Wij.shape)
+                find_average_error_Wij=True
+        if find_average_error_Wij==False:
+            error_Wij_to_do=[]
+            if number_model==1:
+                name_err_before=os.path.join(name_couplings_before, "error_Wij_"+index_model+"_before_ising.txt")
+                name_err_after=os.path.join(name_couplings_after, "error_Wij_"+index_model+"_after_ising.txt")
+            for step in range(number_model):
+                if number_model>1:
+                    name_err_before=os.path.join(name_couplings_before, "error_Wij_"+str(step)+"_before_ising.txt")
+                    name_err_after=os.path.join(name_couplings_after, "error_Wij_"+str(step)+"_after_ising.txt")
+                    #if after not done we have to do before and after:
+                    print(f"----------------------- step {step} -----------------------")
+                    if not os.path.isfile(name_err_after):
+                        print("error_Wij_after_ising not done yet")
+                        
+                    if not os.path.isfile(name_err_before):
+                        print("error_Wij_before_ising not done yet")
+
+                    if not os.path.isfile(name_err_after) or not os.path.isfile(name_err_before):
+                        error_Wij_to_do.append(step)
+                    else:
+                        print("error_Wij_before_ising already exists we don't compute it again")
+                        print("path:",name_err_before)
+                        print("error_Wij_after_ising already exists we don't compute it again")
+                        print("path:",name_err_after)
+
+                    print("-------------------------------------------------------")
+                else: #only one model and we know that it does not exist
+                    error_Wij_to_do.append(0)
+
+            if K>21:
+                print("K=",K,"-> we have the taxonomy for each sequence")
+                average_error_Wij=np.zeros(((L-1)*K,(L-1)*K))
+                average_error_after_Wij=np.zeros(((L-1)*K,(L-1)*K))
+            else:
+                print("K=",K,"-> we don't have the taxonomy for each sequence")
+                average_error_Wij=np.zeros((L*K,L*K))
+                average_error_after_Wij=np.zeros((L*K,L*K))
+            for step in range(number_model):
+                if step in error_Wij_to_do:
+                    if number_model>1:
+                        name_err_before=os.path.join(name_couplings_before, "error_Wij_"+str(step)+"_before_ising.txt")
+                        name_err_after=os.path.join(name_couplings_after, "error_Wij_"+str(step)+"_after_ising.txt")
+                    else:
+                        name_err_before=os.path.join(name_couplings_before, "error_Wij_"+index_model+"_before_ising.txt")
+                        name_err_after=os.path.join(name_couplings_after, "error_Wij_"+index_model+"_after_ising.txt")
+                    print("extraction of the errors for the model: ", step+1, "/", number_model)
+                    if number_model>1:
+                        model=torch.load(model_name+'_' + str(step))
+                    else:
+                        model=torch.load(model_name)
+                    error_Wij=ErrorWij_before_ising(model,L,K,device,length_prot1)
+                    error_Wij_after=ErrorWij_after_ising(error_Wij,data_per_col,L,K,length_prot1)
+                    if K>21:
+                        #with tax we need to remove the last blocs of size K
+                        print("treatment of errors: remove the last column corresponding to the taxonomy type")
+                        error_Wij=error_Wij[:-K,:-K]
+                        error_Wij_after=error_Wij_after[:-K,:-K]
+                        print("shape of error_Wij_after:",error_Wij_after.shape)
+                    #save the couplings in the file couplings_before_ising.txt
+                    if number_model==1:
+                        np.savetxt(path_error_Wij_before, error_Wij)
+                        np.savetxt(path_error_Wij_after, error_Wij_after)
+                        print("error_Wij before ising gauge saved in the file: ", path_error_Wij_before)
+                        print("error_Wij after ising gauge saved in the file: ", path_error_Wij_after)
+                    else:
+                        np.savetxt(name_err_before, error_Wij)
+                        np.savetxt(name_err_after, error_Wij_after)
+                        print("error_Wij before ising gauge saved in the file: ", name_err_before)
+                        print("error_Wij after ising gauge saved in the file: ", name_err_after)
+                    average_error_Wij += error_Wij
+                    average_error_after_Wij += error_Wij_after
+                    del error_Wij
+                    del error_Wij_after
+                    del model
+                    gc.collect()
+                else:
+                    average_error_Wij += np.loadtxt(name_err_before)
+                    average_error_after_Wij += np.loadtxt(name_err_after)
+        average_error_Wij=average_error_Wij/number_model
+        average_error_after_Wij=average_error_after_Wij/number_model
+        np.savetxt(path_error_Wij_before, average_error_Wij)
+        np.savetxt(path_error_Wij_after, average_error_after_Wij)
+        print("average error_Wij before ising gauge saved in the file: ", path_error_Wij_before)     
+        print("average error_Wij after ising gauge saved in the file: ", path_error_Wij_after)   
+    #########################################################################
+    #########################################################################
+
+
     #check if the couplings after ising already exist
-    name_to_check= os.path.join(couplings_path, "couplings_after_ising/couplings_after_ising_0-"+str(number_model-1)+".txt")
-    if os.path.isfile(name_to_check):   
-        print("couplings_after_ising already exists, we don't compute it again")
+    if number_model==1:
+        name_to_check= os.path.join(couplings_path, "couplings_after_ising/couplings_after_ising_"+index_model+".txt")
+    else:
+        name_to_check= os.path.join(couplings_path, "couplings_after_ising/couplings_after_ising_0-"+str(number_model-1)+".txt")
+ 
+    if os.path.isfile(name_to_check):
+        print("couplings_after_ising already exists we don't compute it again")
         average_couplings=np.loadtxt(name_to_check)
-        couplings_path=os.path.join(couplings_path, "couplings_after_ising")
+        if K>21:
+            L=L-1
+    
     else:
         #check if it exist
         find_average_couplings=False
-        path_couplings_before=os.path.join(name_couplings_before, "couplings_0"+str(number_model-1)+"_before_ising.txt")
-
+        if number_model==1:
+            path_couplings_before=os.path.join(name_couplings_before, "couplings_"+index_model+"_before_ising.txt")
+        else:
+            path_couplings_before=os.path.join(name_couplings_before, "couplings_0-"+str(number_model-1)+"_before_ising.txt")
         if number_model==1 or type_average=="average_couplings":
             if os.path.isfile(path_couplings_before):
-                print("couplings_before_ising.txt already exists, we don't compute it again")
+                print("couplings_before_ising.txt, we don't compute it again")
                 average_couplings=np.loadtxt(path_couplings_before)
                 find_average_couplings=True
                 #print("shape of couplings before ising:", average_couplings.shape) #oke
@@ -563,21 +956,31 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
                     L=L-1 #lose a dimension with class
                     data_per_col=data_per_col[:,:-1] #remove the last column corresponding to the class type
                 print('L,K:(',L,',',K,')')
+                print("------------------------------------")
                 
         if find_average_couplings==False: #can be type_average=average_couplings_frob (we need all couplings) or we don't have the couplings_before_ising.txt
             # Create the directory and its parent directories if they don't exist
             os.makedirs(name_couplings_before, exist_ok=True)
             # Check which couplings we need to compute
             couplings_ising_to_do=[]
-            for step in range(number_model):
-                name_couplings_before_step=os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt")
+            if number_model==1:
+                name_couplings_before_step=os.path.join(name_couplings_before, "couplings_", index_model, "_before_ising.txt")
                 if os.path.isfile(name_couplings_before_step):
-                    print(f"couplings_{step}_before_ising.txt already exists, we don't compute it again")
+                    print("couplings_", index_model, "_before_ising.txt already exists we don't compute it again")
                 else:
-                    print(f"couplings_{step}_before_ising.txt does not exist, we will compute it")
-                    os.makedirs(couplings_path, exist_ok=True)
-                    couplings_ising_to_do.append(step)
-            print("--------------------------------------------------------------------------")
+                    print("couplings_", index_model, "_before_ising.txt does not exist, we have to compute it")
+                    couplings_ising_to_do.append(0)
+            else:
+                for step in range(number_model):
+                    name_couplings_before_step=os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt")
+                    if os.path.isfile(name_couplings_before_step):
+                        print(f"couplings_{step}_before_ising.txt already exist, we don't compute it again")
+                    else:
+                        print(f"couplings_{step}_before_ising.txt does not exist, we have to compute it")
+                        os.makedirs(name_couplings_after, exist_ok=True)
+                        couplings_ising_to_do.append(step)
+                    print("------------------------------------")
+
             if K>21:
                 print("K=",K,"-> we have the taxonomy for each sequence")
                 average_couplings=np.zeros(((L-1)*K,(L-1)*K))
@@ -587,27 +990,37 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
             #for step,model in enumerate(models):
             for step in range(number_model):
                 if step in couplings_ising_to_do:
-                    print("extraction of the couplings for the model: ", step+1, "/", number_model)
-                    if number_model>1:
-                        model=torch.load(model_name+'_' + str(step))
-                    else:
+                    if number_model==1:
+                        print("extraction of the couplings for the models: ", index_model)
                         model=torch.load(model_name)
-                    couplings=extract_couplings(model, model_type, (L,K),data_per_col,output_name)
+                    else:
+                        print("extraction of the couplings for the model: ", step+1, "/", number_model)
+                        model=torch.load(model_name+'_' + str(step))
+                    
+                        
+                    couplings=extract_couplings(model, model_type, (L,K),data_per_col,couplings_path,device,length_prot1)
+                    ###################################################################################
                     if K>21:
                         #with tax we need to remove the last blocs of size K
                         print("treatment of couplings: remove the last column corresponding to the taxonomy type")
                         couplings=couplings[:-K,:-K]
+                    
                     #save the couplings in the file couplings_before_ising.txt
-                    np.savetxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"), couplings)
-                    print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
-                    #ALL_couplings.append(couplings)
+                    if number_model>1:
+                        np.savetxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"), couplings)
+                        print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
+                    else:
+                        np.savetxt(os.path.join(name_couplings_before, "couplings_"+index_model+"_before_ising.txt"), couplings)
+                        print("couplings before ising gauge saved in the file: ", os.path.join(name_couplings_before, "couplings_"+index_model+"_before_ising.txt"))
                     average_couplings += couplings
                     del couplings
                     del model
                     gc.collect()
                 else:
-                    name_coup=os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt")
-                    #ALL_couplings.append(np.loadtxt(name_coup))
+                    if number_model==1:
+                        name_coup=os.path.join(name_couplings_before, "couplings_"+index_model+"_before_ising.txt")
+                    else:
+                        name_coup=os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt")
                     average_couplings += np.loadtxt(name_coup)
 
             if K>21:
@@ -616,7 +1029,6 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
 
             average_couplings=average_couplings/number_model
             np.savetxt(path_couplings_before, average_couplings)
-            
             
             print("average couplings before ising gauge saved in the file: ", path_couplings_before)
         
@@ -658,12 +1070,7 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
                     print("we apply the average product correction on each couplings before averaging them")
                 else:
                     print("we will average the couplings before applying the average product correction")
-                # Path for the couplings directory without the last part of the output_name (to stock in the folder)
-                couplings_path = os.path.dirname(output_name)
-                #add the name 'couplings_models' to the couplings_path
-                couplings_path = os.path.join(couplings_path, 'couplings_after_ising/')
-                # Create the directory and its parent directories if they don't exist
-                os.makedirs(couplings_path, exist_ok=True)
+                
                 
                 average_couplings=np.zeros((L*K,L*K))
                 #ALL_couplings_ising=[]
@@ -674,44 +1081,48 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
                     #look if the file with path couplings_path and name couplings_ising_step.txt exists
                     #if it exists, load it and don't do ising_gauge again
                     #if it doesn't exist, do ising_gauge and save it
-                    if os.path.isfile(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt")):
+                    if os.path.isfile(os.path.join(name_couplings_after, "couplings_after_ising_" + str(step) + ".txt")):
                         print("couplings_after_ising_" + str(step) + ".txt already exists, we don't compute it again")
-                        couplings = np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
+                        couplings = np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_" + str(step) + ".txt"))
+                        
                     else:
                         couplings=np.loadtxt(os.path.join(name_couplings_before, "couplings_"+str(step)+"_before_ising.txt"))
                         couplings = ising_gauge(couplings, (L,K), data_per_col,length_prot1)
-                        np.savetxt(os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"), couplings)
-                        print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising_" + str(step) + ".txt"))
+                        np.savetxt(os.path.join(name_couplings_after, "couplings_after_ising_" + str(step) + ".txt"), couplings)
+                        print("couplings after ising gauge saved in the file: ", os.path.join(name_couplings_after, "couplings_after_ising_" + str(step) + ".txt"))
                     #ALL_couplings_ising.append(couplings)
                     average_couplings += couplings
                     del couplings
                     gc.collect()
                     #step+=1
                 average_couplings=average_couplings/number_model
-                np.savetxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"), average_couplings)
-                print("average couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
+                np.savetxt(os.path.join(name_couplings_after, "couplings_after_ising_0-"+str(number_model-1)+".txt"), average_couplings)
+                print("average couplings after ising gauge saved in the file: ", os.path.join(name_couplings_after, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
                 
             else:
                 print("error with type_average")
         else: # we do ising on the average of the models (number_model=1)
             print("You have chosen to treat only one model")
-            couplings_path = os.path.dirname(output_name)
-            #add the name 'couplings_after_ising' to the couplings_path
-            couplings_path = os.path.join(couplings_path, 'couplings_after_ising/')
+
             #check if it exist
-            if os.path.isfile(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt")):
-                print("couplings_after_ising_0-"+str(number_model-1)+".txt already exists, we don't compute it again")
-                average_couplings=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
+            if os.path.isfile(os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt")):
+                print("couplings_after_ising_" + index_model + ".txt already exists, we don't compute it again")
+                average_couplings=np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt"))
+                #check that we have couplings[0:length_prot1,0:length_prot1] = 0 if length_prot1!=
+                if length_prot1!=0:
+                    assert np.all(average_couplings[0:length_prot1*K,0:length_prot1*K]==0)
+                    assert np.all(average_couplings[length_prot1*K:,length_prot1*K:]==0)
             else:
                 print("Treatment of the ising gauge on the couplings...")
                 average_couplings=np.loadtxt(path_couplings_before)
+                print("shape average_couplings before ising:", average_couplings.shape)
                 average_couplings=np.copy(average_couplings)
                 #print("shape data_per_col:", data_per_col.shape)
                 average_couplings=ising_gauge(average_couplings,(L,K), data_per_col,length_prot1)
                 # Create the directory and its parent directories if they don't exist
-                os.makedirs(couplings_path, exist_ok=True)
-                np.savetxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"), average_couplings)
-                print("couplings after ising gauge saved in the file: ", os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
+                os.makedirs(name_couplings_after, exist_ok=True)
+                np.savetxt(os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt"), average_couplings)
+                print("couplings after ising gauge saved in the file: ", os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt"))
                 
             
 
@@ -732,7 +1143,7 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
         plt.ylabel("$C_{lk \lambda \kappa}$", fontsize=18)
         plt.grid()
         #save it
-        plt.savefig(os.path.join(couplings_path, "couplings_after_ising.png"))
+        plt.savefig(os.path.join(name_couplings_after, "couplings_after_ising.png"))
     else:
         print("No plot after the ising gauge, because figure=False")
     del average_couplings
@@ -742,7 +1153,7 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
     
 
     ##################################################################################
-    ################# AVERAGE PRODUCT CORRECTION #####################################
+    ################################## FROBENIUS #####################################
     ##################################################################################
     '''
     There are 2 cases:
@@ -752,97 +1163,221 @@ def couplings(model_name, length_prot1=0, number_model=1, type_average='average_
         we apply the average product correction on each couplings before averaging them
     '''
     print("--------------------------------------------------------------------------")
-    print("------------------------ average product correction ----------------------")
-    output_directory = os.path.dirname(output_name) # Path for the couplings directory without the last part of the output_name (to stock in the folder)
-    # saved the last part as the name of the file
-    output_name = os.path.basename(output_name)
-    if number_model==1:
-        #add the name 'average-models' to the output_directory path
-        output_directory = os.path.join(output_directory, 'average-models/')
-    else:
-        if type_average=="average_couplings_frob":
-            output_directory = os.path.join(output_directory, 'average-models-and-frob/')
-        elif type_average=="average_couplings":
-            output_directory = os.path.join(output_directory, 'average-couplings/')
+    print("------------------ Frobenius and average correction ----------------------")
+    
     #check if it exist
-    if os.path.isfile(os.path.join(output_directory, output_name,"_0-"+str(number_model-1)+".txt")):
-        print("The final couplings file already exists, we don't compute it again")
-        print("You can find it at the path: ", os.path.join(output_directory, output_name))
-    else:
-        n=0
-        print("---------------- Frobenius ----------------")
-        if number_model>1 and type_average=="average_couplings_frob":
-            print("Treatment of the average product correction on the couplings...")
-            for step in range(number_model):
-                couplings_old=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_"+str(step)+".txt"))
+    #if os.path.isfile(os.path.join(name_frobenius,"couplings_frobenius_0-"+str(number_model-1)+".txt")):
+    #    print("The average Frobenius norm already exists, we don't compute it again")
+    #    print("You can find it at the path: ", os.path.join(name_frobenius,"couplings_frobenius_0-"+str(number_model-1)+".txt"))
+    #else:
+    n=0
+    print("---------------- Frobenius ----------------")
+    if number_model>1 and type_average=="average_couplings_frob":
+        couplings_frobenius_to_do=[]
+        for step in range(number_model):
+            name_frobenius_step=os.path.join(name_frobenius, "couplings_frobenius_"+str(step)+".txt")
+            if os.path.isfile(name_frobenius_step):
+                print(f"couplings_{step}_before_ising.txt already exist, we don't compute it again")
+            else:
+                print(f"couplings_{step}_before_ising.txt does not exist, we have to compute it")
+                couplings_frobenius_to_do.append(step)
+            print("------------------------------------") 
+        for step in range(number_model):
+            if step in couplings_frobenius_to_do:
+                couplings_old=np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_"+str(step)+".txt"))
                 couplings=0.5*(couplings_old + couplings_old.T)
-                
+                del couplings_old
+                if length_prot1!=0:
+                    assert np.allclose(couplings[0:length_prot1*K,0:length_prot1*K],np.zeros_like(couplings[0:length_prot1*K,0:length_prot1*K]))
+                    assert np.allclose(couplings[length_prot1*K:,length_prot1*K:],np.zeros_like(couplings[length_prot1*K:,length_prot1*K:]))
             #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
                 matrix = []
+                print("New version 1may 2024: we don't count the gaps scores")
                 for i in range(L) :
                     rows = []
                     for j in range(L) :
-                        rows.append(couplings[i*K:(i+1)*K, j*K:(j+1)*K])
+                        #rows.append(couplings[i*K:(i+1)*K, j*K:(j+1)*K])
+                        #NEW VERSION 1TH MAY 2024: REMOVE THE GAPS -> element k=0
+                        rows.append(couplings[(i*K+1):(i+1)*K, (j*K+1):(j+1)*K])
+                        
                     matrix.append(rows)
                 couplings = np.array(matrix)
-                #frobenius norm
-                couplings = np.linalg.norm(couplings, 'fro', (2, 3))
-                #average product correction
-                couplings = average_product_correction(couplings)
-                #reshape in form (0,1) (0,2) ... (1,2) (1,3) ...
-                couplings = np.triu(couplings)
-                tmp = []
-                for i in range(L) :
-                    for j in range(i+1, L) :
-                        tmp.append(couplings[i,j])
-                couplings = np.array(tmp) 
-                if n==0:
-                    average_couplings=np.copy(couplings)
-                    n=1
-                average_couplings += couplings
-                del couplings
-                del couplings_old
-                gc.collect()
-
-            average_couplings = average_couplings/number_model
-        else: #average couplings or for number_model=1
-            print("Treatment of the average product correction on the average couplings...")
-            average_couplings=np.loadtxt(os.path.join(couplings_path, "couplings_after_ising_0-"+str(number_model-1)+".txt"))
-            average_couplings+=0.5*(average_couplings + average_couplings.T)
-            #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
-            matrix = []
-            for i in range(L) :
-                rows = []
-                for j in range(L) :
-                    rows.append(average_couplings[i*K:(i+1)*K, j*K:(j+1)*K])
-                matrix.append(rows)
-            average_couplings = np.array(matrix)
-            average_couplings = np.linalg.norm(average_couplings, 'fro', (2, 3))
-            average_couplings = average_product_correction(average_couplings)
-            average_couplings = np.triu(average_couplings)
-            tmp = []
-            for i in range(L) : 
-                for j in range(i+1, L) :
-                    tmp.append(average_couplings[i,j]) #(0,1), (0,2),...(1,2),(1,3),....(L-1,L) -> L*(L-1)/2 elements in total
-            average_couplings = np.array(tmp)
-
-        ##################################################################################
-        ##################################################################################
-        
-        #################################################################################
-        ################# SAVING THE COUPLINGS ##########################################
-        #################################################################################
-        
-        os.makedirs(output_directory, exist_ok=True) # Create the directory and its parent directories if they don't exist
-        #print the path of: os.path.join(output_directory, output_name)
-        output_name=output_name+"_0-"+str(number_model-1)+".txt"
-        np.savetxt(os.path.join(output_directory,  output_name), average_couplings)
-        print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
-        print("---------------------------------- END -----------------------------------")
-        print("--------------------------------------------------------------------------")
-        #################################################################################
-        #################################################################################
                 
+                #frobenius norm
+                couplings_frob = np.linalg.norm(couplings, 'fro', (2, 3)) #frobenius norm on each element of the array (2,3)
+                
+                np.savetxt(os.path.join(name_frobenius, "couplings_frobenius_"+str(step)+".txt"), couplings_frob)
+                print("couplings frobenius saved in the file: ", os.path.join(name_frobenius, "couplings_frobenius_"+str(step)+".txt"))
+            else:
+                couplings_frob=np.loadtxt(os.path.join(name_frobenius, "couplings_frobenius_"+str(step)+".txt"))
+            #average product correction
+            couplings = average_product_correction(couplings_frob,length_prot1)
+            if n==0:
+                average_couplings=np.copy(couplings) #to initialise
+            if n==1:
+                average_couplings+=couplings
+
+            del couplings_frob
+            #reshape in form (0,1) (0,2) ... (1,2) (1,3) ...
+            couplings_new = np.triu(couplings)
+            tmp = []
+            for i in range(L) :
+                for j in range(i+1, L) :
+                    tmp.append(couplings_new[i,j])
+            couplings_new = np.array(tmp) 
+            if n==0:
+                average_couplings_new=np.copy(couplings_new) #to initialise
+                n=1
+            if n==1:
+                average_couplings_new += couplings_new
+            del couplings_new
+
+            
+            gc.collect()
+
+        average_couplings_new = average_couplings_new/number_model
+        average_couplings = average_couplings/number_model
+    else: #average couplings or for number_model=1
+        print("Treatment of the average product correction on the average couplings...")
+        
+        average_couplings=np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt"))
+        average_couplings=0.5*(average_couplings + average_couplings.T) #symmetrize the couplings
+        print("shape of average_couplings before frobenius:", average_couplings.shape) #(L*K,L*K)
+        assert np.allclose(average_couplings, average_couplings.T) #check if the average couplings before frobenius is symmetric
+        #reshape couplings in a L x L array where each element contains the K x K categorical couplings to apply frobenius norm on each element
+        matrix = []
+        print("New version 1may 2024: we don't count the gaps scores")
+        print("L:",L)
+        for i in range(L) :
+            rows = []
+            for j in range(L) :
+                #rows.append(average_couplings[i*K:(i+1)*K, j*K:(j+1)*K])
+                #NEW VERSION 1TH MAY 2024: REMOVE THE GAPS -> element k=0
+                rows.append(average_couplings[(i*K+1):(i+1)*K, (j*K+1):(j+1)*K])
+                #if i==0 and j==4:
+                #    print(average_couplings[(i*K+1):(i+1)*K, (j*K+1):(j+1)*K])
+            matrix.append(rows)
+               
+        average_couplings = np.array(matrix)
+
+        print("shape of average_couplings:", average_couplings.shape) #(L,L,K,K)
+        average_couplings = np.linalg.norm(average_couplings, 'fro', (2, 3)) 
+        print("verify that after linalg we have symmetry")
+        assert np.allclose(average_couplings, average_couplings.T) #check if the matrix frobenius is symmetric
+
+
+        if length_prot1!=0:
+            assert np.allclose(average_couplings[0:length_prot1,0:length_prot1],np.zeros_like(average_couplings[0:length_prot1,0:length_prot1]))
+            assert np.allclose(average_couplings[length_prot1:,length_prot1:],np.zeros_like(average_couplings[length_prot1:,length_prot1:]))
+             
+        
+        np.savetxt(os.path.join(name_frobenius, "couplings_frobenius_"+index_model+".txt"), average_couplings)
+        print("couplings frobenius saved in the file: ", os.path.join(name_frobenius, "couplings_frobenius_"+index_model+".txt"))
+        average_couplings = average_product_correction(average_couplings,length_prot1)
+        if length_prot1!=0:
+            assert np.allclose(average_couplings[0:length_prot1,0:length_prot1],np.zeros_like(average_couplings[0:length_prot1,0:length_prot1]))
+            assert np.allclose(average_couplings[length_prot1:,length_prot1:],np.zeros_like(average_couplings[length_prot1:,length_prot1:]))
+        average_couplings_new = np.triu(average_couplings) #np.triu -> upper triangular part of the matrix
+        tmp = []
+        for i in range(L) : 
+            for j in range(i+1, L) :
+                tmp.append(average_couplings_new[i,j]) #(0,1), (0,2),...(1,2),(1,3),....(L-1,L) -> L*(L-1)/2 elements in total
+        average_couplings_new = np.array(tmp)
+
+    ##################################################################################
+    ##################################################################################
+    
+    #################################################################################
+    ################# SAVING THE COUPLINGS ##########################################
+    #################################################################################
+    
+    #print the path of: os.path.join(output_directory, output_name)
+    
+    if number_model>1:
+        output_name=output_name+"_0-"+str(number_model-1)+".txt"
+        np.savetxt(os.path.join(name_average_product, "average_product_0-"+str(number_model-1)+".txt"), average_couplings)
+        print("The average product correction is saved in the file: ", os.path.join(name_average_product, "average_product_0-"+str(number_model-1)+".txt"))
+    else:
+        output_name=output_name+"_"+index_model+".txt"
+        np.savetxt(os.path.join(name_average_product, "average_product_"+index_model+".txt"), average_couplings)
+        print("The average product correction is saved in the file: ", os.path.join(name_average_product, "average_product_"+index_model+".txt"))
+    np.savetxt(os.path.join(output_directory,  output_name), average_couplings_new)
+    print("The final couplings file is saved in the file: ", os.path.join(output_directory, output_name))
+    print("---------------------------------- END -----------------------------------")
+    print("--------------------------------------------------------------------------")
+        #################################################################################
+        #################################################################################
+    #########################################################################
+    ############################ error calculation ##########################
+    if number_model==1:
+        error_after_frob_path= os.path.join(name_frobenius, "error_after_frob_"+index_model+".txt")
+        average_couplings=np.loadtxt(os.path.join(name_average_product, "average_product_"+index_model+".txt"))
+    else:
+        error_after_frob_path= os.path.join(name_frobenius, "error_after_frob_0-"+str(number_model-1)+".txt")
+        average_couplings=np.loadtxt(os.path.join(name_average_product, "average_product_0-"+str(number_model-1)+".txt"))
+    if os.path.isfile(error_after_frob_path):
+        print("error_after_frob already exists we don't compute it again")
+        average_error_after_frob=np.loadtxt(error_after_frob_path)
+        #verify that average_couplings is symmetric
+        assert np.allclose(average_couplings, average_couplings.T) #check if the matrix frobenius is symmetric
+        error_Wab_final=ErrorWij_average_product(average_error_after_frob,average_couplings,L,length_prot1)
+        if number_model==1:
+            np.savetxt(os.path.join(output_directory, "error_Wab_final_"+index_model+".txt"), error_Wab_final)
+            print("error_Wab_final saved in the file: ", os.path.join(output_directory, "error_Wab_final_"+index_model+".txt"))
+        else:
+            np.savetxt(os.path.join(output_directory, "error_Wab_final_0-"+str(number_model-1)+".txt"), error_Wab_final)
+            print("error_Wab_final saved in the file: ", os.path.join(output_directory, "error_Wab_final_0-"+str(number_model-1)+".txt"))
+    else:
+        print("---------------- Frobenius error calculation ----------------")
+        if number_model>1 and type_average=="average_couplings_frob":
+            n=0
+            for step in range(number_model):
+                name_couplings_before=os.path.join(name_couplings_before, "error_Wij_"+str(step)+"_before_ising.txt")
+                name_err_after=os.path.join(name_couplings_after, "error_Wij_"+str(step)+"_after_ising.txt")
+                name_frob=os.path.join(name_frobenius, "error_after_frob_"+str(step)+".txt")
+                couplings_after_ising=np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_"+str(step)+".txt"))
+                couplings_after_frob=np.loadtxt(os.path.join(name_frobenius, "couplings_frobenius_"+str(step)+".txt"))
+                error_Wij_after_ising=np.loadtxt(name_err_after)
+                error_Wab_step=ErrorWij_frobenius(error_Wij_after_ising,couplings_after_ising,couplings_after_frob,L,K,length_prot1)
+                if n==0:
+                    error_Wab=np.copy(error_Wab_step)
+                    n=1
+                if n==1:
+                    error_Wab += error_Wab_step
+                np.savetxt(name_frob, error_Wab)
+                print("error after frobenius saved in the file: ", name_frob)
+            error_Wab=error_Wab/number_model
+            np.savetxt(error_after_frob_path, error_Wab)
+        
+        else:
+            couplings_after_ising=np.loadtxt(os.path.join(name_couplings_after, "couplings_after_ising_" + index_model + ".txt"))
+            couplings_after_frob=np.loadtxt(os.path.join(name_frobenius, "couplings_frobenius_"+index_model+".txt"))
+            error_Wij_after_ising=np.loadtxt(path_error_Wij_after)
+            error_Wab=ErrorWij_frobenius(error_Wij_after_ising,couplings_after_ising,couplings_after_frob,L,K,length_prot1)
+            np.savetxt(error_after_frob_path, error_Wab)
+            print("error after frobenius saved in the file: ", os.path.join(name_frobenius, "error_after_frob_"+index_model+".txt"))
+            del couplings_after_ising
+            del couplings_after_frob
+            del error_Wij_after_ising
+            gc.collect()
+
+        error_Wab_final=ErrorWij_average_product(error_Wab,average_couplings,L,length_prot1)
+        if number_model==1:
+            np.savetxt(os.path.join(output_directory, "error_Wab_final_"+index_model+".txt"), error_Wab_final)
+            print("error_Wab_final saved in the file: ", os.path.join(output_directory, "error_Wab_final_"+index_model+".txt"))
+        else:
+            np.savetxt(os.path.join(output_directory, "error_Wab_final_0-"+str(number_model-1)+".txt"), error_Wab_final)
+            print("error_Wab_final saved in the file: ", os.path.join(output_directory, "error_Wab_final_0-"+str(number_model-1)+".txt"))
+
+
+    #########################################################################
+    #########################################################################
+    print("------------- END OF THE COUPLINGS CALCULATION :) -------")
+    print(" See you soon!")
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
 
 
 
