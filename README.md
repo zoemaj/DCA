@@ -354,7 +354,7 @@ $${\color{blue} ................................................................
 ### the dcaTools
 -----------------------------------------------------------
 In addition to these 4 modules. The directory dcaTools contains [3 scripts](https://gitlab.com/ducciomalinverni/dcaTools.git) that enable to make and evaluate contact prediction using the output of couplings.py. Details on their usage can be found [here](https://link.springer.com/protocol/10.1007%2F978-1-4939-9608-7_16).
-
+Note that the plotTopContacts and pdbMap have been modified.
 ***extract the contact plot***
 This module plot the predicted contact on the ones predicted by alpha fold
 
@@ -364,8 +364,19 @@ $${\color{blue} ........................... \space \color{blue} Arguments \space
 * dcaFile : DCA prediction file
 * Ntop : The number of top ranked DCA contacts to plot.
 * contactThreshold : The threshold in Angstroms defining a structural contact
+* pdbMap2 : Optional second structural contact map extracted from PDB. (usefull for dimer and two proteins) **Default: None**
+* pdbDimer : Optional file of the dimer pdbMap (to have the half of the square with true contact of the dimer and the other half with the PDBmap that has only one part) **Default None**
+* pdbError : Optional file of the pdbMap with the error of the contacts **Default None**
+* OnlyError : Only plot the error of the contacts **Default False**
+* CutError_L : Not penalise the diagonal +- cutError_L termes **Default 0**
+* penalizingErrors : Penalize the contacts according to the errors file **Default False**
+* N_square : Number of squares to take for the Gaussian errors. **Default 2**
+* sigma : Float number for the gaussian error. **Default 1**
+* WithoutGauss : Boolean to not use the gaussian filter. **Default False**
+* length_prot1 : Length of the first protein if two proteins. **Default 0**
 * output_name : Name for the output file -> this is not from dca-Tools but has been added for simplifications. (**Default: will same to the same path than the one of pdbMap**)
 * ik : minimal sequence separation in the alignment to extract contacts (**default 4**)
+* coordinatesSquare1 ... 7 : maximum 7 possibles coordinates to give if we want to plot only certain region. x0,y0,w,h,N. **Default: 0 0 0 0 0**
 
 ```shell
 
