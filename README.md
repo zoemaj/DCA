@@ -23,6 +23,11 @@ If you want to test some functions with a short set of sequences please go direc
 The goal of Neural Network DCA is to enable DCA-based protein contact prediction using non-linear models. The scripts contained in this repository allow to train different neural network architectures on an MSA to **predict the type of a residue given all other residues** in a sequence and then to **extract the knowledge learned by the network to do contact prediction**.
 
 ![ScreenShot](images/image1.png)
+image source: Simona Cocco, Christoph Feinauer, Matteo Figliuzzi, Rémi Monasson, and
+Martin Weigt. Inverse statistical physics of protein sequences: a key issues
+review. Reports on Progress in Physics, 81(3):032601, January 2018. ISSN 1361-
+6633. doi: 10.1088/1361-6633/aa9965. URL http://dx.doi.org/10.1088/
+1361-6633/aa9965.
 
 ## What about chaperons?
 -----------------------------------------------------------
