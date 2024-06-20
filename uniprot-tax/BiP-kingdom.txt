@@ -1,4 +1,0 @@
- Metazoa : 1950
- Fungi : 1655
- Viridiplantae : 933
- Other: 555
