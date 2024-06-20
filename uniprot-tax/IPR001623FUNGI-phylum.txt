@@ -1,0 +1,10 @@
+ Ascomycota : 28291
+ Basidiomycota : 8546
+ Mucoromycota : 2756
+ Zoopagomycota : 965
+ Chytridiomycota : 584
+ Microsporidia : 346
+ Blastocladiomycota : 83
+ Cryptomycota : 56
+ Other: 24
+ Olpidiomycota : 17
