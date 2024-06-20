@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import plotting
+
+if __name__=="__main__":
+
+    parser=argparse.ArgumentParser()
+    parser.add_argument("pdbMap",help="Structural contact map extracted from PDB.")
+    parser.add_argument("dcaFile",help="DCA predictions file.")
+    parser.add_argument("Ntop",help="The number of top ranked DCA contacts to plot.",type=int)
+    parser.add_argument("contactThreshold",help="The threshold in Angstroms defining a structural contact."
+                        ,type=float)
+    parser.add_argument("-pdbMap2",help="Optional second structural contact map extracted from PDB. (usefull for dimer and two proteins)",default='None',type=str)
+    parser.add_argument("-pdbDimer",help="Optional file of the dimer pdbMap (to have the half of the square with true contact of the dimer and the other half with the PDBmap that has only one part)",default='None',type=str)
+    parser.add_argument("-pdbError",help="Optional file of the pdbMap with the error of the contacts",default='None',type=str)
+    parser.add_argument("-OnlyError",help="Only plot the error of the contacts",default=False,action='store_true')
+    parser.add_argument("-CutError_L",help="Cut the error of the contacts to a certain value",default=0,type=int)
+    parser.add_argument("-penalizingErrors",help="Penalize the contacts according to the errors file",default=False,action='store_true')
+    parser.add_argument("-N_square",help="Number of squares to take for the penalizing errors. Default 2",default=2,type=int)
+    parser.add_argument("-sigma",help="Float number for the gaussian. Default 1",default=1,type=float)
+    parser.add_argument("-WithoutGauss",help="Boolean to not use the gaussian filter",default=False,action='store_true')
+    parser.add_argument("-length_prot1",help="Length of the first protein if two prots",default=0,type=int)
+    parser.add_argument("-output_name", help="Name for the output file. default / (will save to the same path)", default="/",type=str)
+    parser.add_argument("-ik",help="Minimal sequence separation in the alignment to extract contacts (default 4).",default=4,type=int)
+    parser.add_argument("-OnlySquare",help="If only one coordinatesSquare1 and that we want to plot only this region",default=False,action='store_true')
+    parser.add_argument("-coordinatesSquare1", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare2", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare3", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare4", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare5", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare6", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    parser.add_argument("-coordinatesSquare7", metavar='N', type=int, nargs='+', help="list with x0,y0,w,h,N if we want only to show the error in the square at position left top corner x0,y0 and width w and height h.",default=[0,0,0,0,0])
+    args=parser.parse_args()
+
+    plotting.plotTopContacts(args.pdbMap,args.dcaFile,args.Ntop,args.contactThreshold,args.pdbMap2,args.pdbDimer,args.pdbError,args.OnlyError,args.CutError_L,args.penalizingErrors,args.N_square,args.sigma,args.WithoutGauss,args.length_prot1,args.output_name,args.ik,args.OnlySquare,args.coordinatesSquare1,args.coordinatesSquare2,args.coordinatesSquare3,args.coordinatesSquare4,args.coordinatesSquare5,args.coordinatesSquare6,args.coordinatesSquare7)
