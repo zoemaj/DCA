@@ -1,6 +1,5 @@
-$$ {\color{red} ....................................... \space \color{red} still \space \color{red} in \space \color{red} progress.... \space \color{red} ........................................} $$
 
-**last update 25.04.24**
+**last update 20.06.24**
 
 
 Zoé Majeux
@@ -381,10 +380,6 @@ Compute the distance map of a PDB structure for the purpose of evaluating the pr
 ***PlotTopContacts***
 
 Plots a user-defined number of highest-ranking DCA predicted contacts, overlaid on PDB contact map. The output file format of couplings.py is adapted to make it suitable for this script
-
-***PlotTPrates***
-
-Plots the precision curves for DCA predicted contacts. The output file format of couplings.py is adapted to make it suitable for this script
 
 # TRY ME
 You can find a test into the folder TRY_ME to try the different modules before to run long simulation. Don't panick if the 2D structure is not good, it is normal since TRY_ME has not a lot of sequences
