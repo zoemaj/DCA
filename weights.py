@@ -2,7 +2,59 @@ import numpy as np
 import numba
 from numba import jit
 import os
+#the main function is at the end of the file and is called weights
+#the other functions are used in the main function
+        #get_weights -> compute the weights of the different sequences in the MSA
+        #weight -> compute the weight of a sequence with the others in the MSA
+        
 
+###########################################################################################################################################
+@jit(nopython=True, parallel=True) #parallelise using numba
+def get_weights(MSA,threshold) :
+    """
+    This function compute the weight of each sequence given the threshold of similarity.
+    input:  
+        MSA         ->  table of sequences
+                        csv file, shape (N,L) with N the number of homologous sequences and L the length of a sequence
+        threshold   ->  percentage of similarity between two sequences considered as identical
+                        two sequences are the same if (number of identical a.a at the good position)/L > threshold 
+                        float
+    """
+    print("Computing the weights of the different sequences in the MSA...")
+    weights = np.zeros(len(MSA))
+    for i, seq in enumerate(MSA) :
+        if i%(len(MSA)//10)==0:
+            print(i/len(MSA)*100,"/",100)
+        weights[i] = weight(seq, MSA,threshold)
+    return weights
+
+@jit(nopython=True) #parallelise using numba
+def weight(seq, MSA, threshold) :
+    """
+    This function will, according to the threshold, computes the weight of a sequence with the others in the MSA
+    input:
+        seq         ->  the seq from which we want to extract the weight
+                        sequence of int numbers corresponding to the different a.a
+        MSA         ->  table of sequences
+                        csv file, shape (N,L) with N the number of homologous sequences and L the length of a sequence
+        threshold   ->  percentage of similarity between two sequences considered as identical
+                        two sequences are the same if (number of identical a.a at the good position)/L > threshold 
+                        float
+    output:
+        weight      -> 1/(number of similar sequences according to the threshold)
+                        float 
+    """
+    N= np.sum(np.sum(seq == MSA, axis=1)/len(seq) > threshold)
+    if N == 0 :
+        return 1.0
+    else :
+        return 1.0/N
+###########################################################################################################################################
+
+
+###########################################################################################################################################
+#********************************************** MAIN FUNCTION *****************************************************************************
+########################################################################################################################################### 
 def weights(input_file, output_file="", threshold=0.8) :
     '''
     This function write the weights of the different sequences in the MSA 
@@ -16,6 +68,10 @@ def weights(input_file, output_file="", threshold=0.8) :
                         default=path(input_file)+"/weights-(threshold)/weights-(threshold).txt"
                         string
     '''
+    print("----- Welcome in the function weights :) -----")
+    print("The input file is ", input_file)
+    print("The threshold is ", threshold)
+
     #load the MSA in the input file
     MSA = np.genfromtxt(input_file, delimiter=',')
     #write the output_file
@@ -45,44 +101,10 @@ def weights(input_file, output_file="", threshold=0.8) :
             pass
     #write the weight in the output file
     np.savetxt(output_file, get_weights(MSA,threshold))
+    print("The weights have been saved in ", output_file)
 
-@jit(nopython=True, parallel=True) #parallelise using numba
-def get_weights(MSA,threshold) :
-    """
-    This function compute the weight of each sequence given the threshold of similarity.
-    input:  
-        MSA         ->  table of sequences
-                        csv file, shape (N,L) with N the number of homologous sequences and L the length of a sequence
-        threshold   ->  percentage of similarity between two sequences considered as identical
-                        two sequences are the same if (number of identical a.a at the good position)/L > threshold 
-                        float
-    """
-    weights = np.zeros(len(MSA))
-    for i, seq in enumerate(MSA) :
-        if i%50 == 0 : print(i)
-        weights[i] = weight(seq, MSA,threshold)
-    return weights
-
-@jit(nopython=True) #parallelise using numba
-def weight(seq, MSA, threshold) :
-    """
-    This function will, according to the threshold, computes the weight of a sequence with the others in the MSA
-    input:
-        seq         ->  the seq from which we want to extract the weight
-                        sequence of int numbers corresponding to the different a.a
-        MSA         ->  table of sequences
-                        csv file, shape (N,L) with N the number of homologous sequences and L the length of a sequence
-        threshold   ->  percentage of similarity between two sequences considered as identical
-                        two sequences are the same if (number of identical a.a at the good position)/L > threshold 
-                        float
-    output:
-        weight      -> 1/(number of similar sequences according to the threshold)
-                        float 
-    """
-    N= np.sum(np.sum(seq == MSA, axis=1)/len(seq) > threshold)
-    if N == 0 :
-        return 1.0
-    else :
-        return 1.0/N
-
-
+    print("----- End of the function weights :) -----")
+    print(" See you soon!")
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
