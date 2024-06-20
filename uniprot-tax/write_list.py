@@ -50,6 +50,17 @@ def extract_df(path_file):
     return df
 
 def extract_list(df):
+    ''' 
+    This function extract the different taxonomy identifiers from the dataframe df and save them in a csv file.
+    The user can choose the columns to extract from the dataframe.
+    If the df contain the columns 'Gene Names (ordered locus)' and 'Gene Names (ORF)', they will be extracted.
+    Your two first columns will be "OX" and "Organism_name" (if the column 'Taxonomic lineage' is in the dataframe)
+
+    input:
+        df      ->      dataframe obtained from the uniprot file
+    output:
+        csv file with the different taxonomy identifiers
+    '''
     name_sample=input("Please enter the name of your sample (BiP, DnaK, ...) ")
     #node correspond to the first columns
     Node=df["Organism (ID)"][1:]
@@ -116,18 +127,13 @@ def extract_list(df):
     #print(ORF)
     try:
         organism_strain=df["Organism"][1:]
-        #organism_strain=organism_strain.tolist()
         strains=[]
-        #print(organism_strain[0:10])
-        #take only the part after the word "strain"
         for org in organism_strain:
             if "strain" in org:
-                # Extracting strain information
                 strain_info = org.split("strain ")[1].split(")")[0].strip()
                 if "," in strain_info:
                     #remplace it by a dot
                     strain_info = strain_info.replace(",", ".")
-                # Removing surrounding quotation marks if present
                 if strain_info.startswith('"') and strain_info.endswith('"'):
                     strain_info = strain_info[1:-1]
                 strains.append(strain_info)
