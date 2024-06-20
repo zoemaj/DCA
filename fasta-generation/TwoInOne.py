@@ -6,27 +6,79 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import itertools
+#the main function is at the end of the file and is called TwoInOne
+#the other functions are used in the main function
+        #find_sequential_ordering_gene -> find the identifiant and the number of the gene
+        #create_dictionary_of_operon_id -> create a dictionary with the id of the gene as key and the operon_id as values
+        #find_indices_header -> find the indices of the headers in the csv file
+        #sort_sequences -> sort the sequences of the fasta file and return a dictionary with the organism as key and the sequences as values
+        #compute_max_sim -> compute the maximum similarity between the sequence seq and the sequences in seqs
+        
 
-def create_dictionary_of_operon_id(line,OLN_index,ORF_index):
+
+######################################################################
+def find_sequential_ordering_gene(chain):
+    ''' 
+    This function will find the identifiant and the number of the gene
+    input:      chain -> string of the gene
+    output:     id -> identifiant of the gene
+                numbers -> number of the gene
+    '''
+    id=""
+    numbers=[]
+    chain=list(chain) #transform the chain string as a list of charcaters
+    last_digit=0
+    find_digit=False
+    #we will add every numbers find the chain
+    for i in range(len(chain)-1,0,-1): 
+        if chain[i].isnumeric(): #if the character is a digit but not a "_"
+            numbers.append(chain[i]) #we add the digit to the list
+            find_digit=True
+        elif find_digit==True:
+            break
+        last_digit=i
+    numbers=numbers[::-1] #reverse the list
+    while numbers[0]=="0": #be sure to have no 0 at the beginning
+        numbers=numbers[1:]
+    #CONVERT the list into a string
+    numbers="".join(numbers)
+    numbers=int(numbers)
+    #find the identifiant exemple: SAMEA2683035_02658 -> id: SAMEA2683035, number: 02658
+    #other exemple: JW2594 -> id: JW, number: 2594
+    id=chain[:last_digit] 
     
+    if "_" in id:
+        id=id[:id.index("_")]
+    id="".join(id)
+    return id,numbers
+######################################################################
+
+######################################################################
+def create_dictionary_of_operon_id(line,OLN_index,ORF_index):  
+    ''' 
+    This function will create a dictionary with the id of the gene as key and the operon_id as value
+    input:      line -> list of elements of the csv file
+                OLN_index -> index of the OLN in the csv file
+                ORF_index -> index of the ORF in the csv file
+    output:     dictionary_of_ids -> dictionary with the id of the gene as key and the operon_id as value
+                ox_found -> boolean, True if the OLN or ORF is not None
+
+    '''
     dictionary_of_ids={}
     ox_found=False
     if line[OLN_index]!=" None":
         ox_found=True
-        #be sure to not have space before and after the string
-        line_OLN=line[OLN_index].strip()
-        OLNs=line_OLN.split(" ")
-
+        line_OLN=line[OLN_index].strip() #be sure to not have space before and after the string
+        OLNs=line_OLN.split(" ") #split the string with the space
         for OLN in OLNs:
             if "/" in OLN:
-                #check if there is a "/" because: "If two predicted genes have been merged to form a new gene, both OLNs are indicated, separated by a slash"
+                #check if there is a "/" because: "If two predicted genes have been merged to form a new gene, both OLNs are indicated, separated by a slash - UniProt"
                 two_OLN=OLN.split("/")
                 id,operon_id=find_sequential_ordering_gene(two_OLN[0])
                 if dictionary_of_ids.get(id)==None:
                     dictionary_of_ids[id]=[operon_id]
                 else:
                     dictionary_of_ids[id].append(operon_id)
-                
                 id,operon_id=find_sequential_ordering_gene(two_OLN[1])
                 if dictionary_of_ids.get(id)==None:
                     dictionary_of_ids[id]=[operon_id]
@@ -63,8 +115,16 @@ def create_dictionary_of_operon_id(line,OLN_index,ORF_index):
                 else:
                     dictionary_of_ids[id].append(operon_id)
     return dictionary_of_ids,ox_found
+######################################################################
 
+######################################################################
 def find_indices_header(headers, *args):
+    '''
+    This function will find the indices of the headers in the csv file
+    input:      headers -> list of the headers of the csv file
+                *args -> list of the headers that we want to find the indices
+    output:     indices -> dictionary with the headers as key and the indices as values
+    '''
     indices = {}
     for arg in args:
         if arg in headers:
@@ -73,12 +133,16 @@ def find_indices_header(headers, *args):
             print(f"Header {arg} not found in the header of the csv file")
             return None
     return indices
+######################################################################
 
+######################################################################
 def sort_sequences(fasta_file,file_name=None):
     ''' 
     This function takes a fasta file and returns a dictionary with the organism as key and the sequences as values
-    input: fasta_file -> fasta file with the homologues sequences of different organisms
-    output: organism_sequences -> dictionary with the organism as key and the sequences as values
+    input:
+                fasta_file -> fasta file with the homologues sequences of different organisms
+    output:
+                organism_sequences -> dictionary with the organism as key and the sequences as values
     '''
     #################################################################################################
     ##################### extraction of the fasta file ##############################################
@@ -108,59 +172,49 @@ def sort_sequences(fasta_file,file_name=None):
             Strain_index = header_indices["Strain"]
             OX_index = header_indices["OX"]
 
-            print("Removing the lines with 'unclassified' or 'Unclassified' in the organism name...")
+            print("Removing the lines with 'unclassified' or 'environmental samples' in the organism name...")
             print("Number sequence before removing: ", len(lines))
             #remove each line that have "unclassified" or "Unclassified" in organism_name:
             lines = [line for line in lines if "unclassified" not in line[organism_id].lower()]
-            print("Number sequence after removing: ", len(lines))
+            print("Number sequence after removing unclassified: ", len(lines))
+            lines = [line for line in lines if "environmental samples" not in line[organism_id].lower()]
+            print("Number sequence after removing environmental samples: ", len(lines))
     #################################################################################################
 
     #################################################################################################
     ######################## extraction of the attribute of the sequences ###########################
     #################################################################################################
     for sequence in tqdm(SeqIO.parse(fasta_file, "fasta")):
-        header_parts = sequence.description.split() #split the fasta header by spaces
-        # example of headers: >lcl|Query_317909 tr|A0A494C039|A0A494C039_HUMAN Hypoxia up-regulated protein 1 OS=Homo sapiens OX=9606 GN=HYOU1 PE=1 SV=1
-        #but also: >sp|P11021| BIP_HUMAN Endoplasmic reticulum chaperone BiP OS=Homo sapiens OX=9606 GN=HSPA5 PE=1 SV=2
-
-        
-        # try to Extract organism from the second term after splitting by '_' (in the example it will take HUMAN)
-        #because some time the '_' is in the header_parts[0]
-        try:
-            organism_name = header_parts[1].split('_')[1]  # Extract organism from the second term after splitting by '_' (in the example it will take HUMAN)
-            pass
-        except:
-            organism_name = header_parts[0].split('_')[1]
-            pass
-        try: 
-            number_name=header_parts[1].split('|')[1]
-            pass
-        except:
-            number_name=header_parts[0].split('|')[1]
-            pass
-        
-        organism_name = organism_name.upper()
         ##############################################################################################
         #keep only the sequence of the letters after the header parts
         sequence_prot= sequence.seq
         #################### extraction of the OX number and the OS name ############################
         #extract the OX number:
         OX=None
-        for el in header_parts:
+        for el in sequence.description.split(" "):
             try:
                 OX=el.split('OX=')[1]
+                OX=str(OX)
+                OX=OX.strip()
                 pass
             except:
                 pass
         OS=None
-        try:
-            OS=sequence.description.split('OS=')[1]
-            OS=OS.split('OX=')[0]
-            pass
-        except:
-            pass
-        if OS==None:
-            R=input('No OS identification, it will not be possible to preprocess this file with taxonomy in the future. Do you still want to continue? (yes/no)')
+        OS=sequence.description.split("OS=")[1].split("OX")[0]
+        OS=OS.strip()
+        OS=OS.upper()
+        header_parts=sequence.description.split(" ")
+        number_name=header_parts[0]
+        number_name=number_name.split("|")[1]
+        organism=header_parts[1:]
+        organism_name=" ".join(organism)
+        organism_name=organism_name.split("OS=")[0]
+        organism_name=organism_name.strip()
+        
+
+        ##############################################################################################
+        if OX==None:
+            R=input('No OX identification, it will not be possible to preprocess this file with taxonomy in the future. Do you still want to continue? (yes/no)')
             while  R!='yes' and R!='no':
                 R=input('Please write yes or no:')
             if R=='no':
@@ -177,11 +231,8 @@ def sort_sequences(fasta_file,file_name=None):
             line_with_OX = next((line for line in lines[1:] if int(line[OX_index]) == int(OX)), None) #find the line with the same OX number, if not found return None
             #print("Line with OX: ",line_with_OX)
             if line_with_OX != None:
-                
                 dictionary_of_ids,ox_found=create_dictionary_of_operon_id(line_with_OX,OLN_index,ORF_index)
                 id=line_with_OX[organism_id]
-            #else:
-            #    print(f"No line with the specified OX {OX} found. Sequence removed")
             if ox_found==True:
                 organism_sequences[id].append([number_name,OX,OS,organism_name,sequence_prot,dictionary_of_ids])   
         #############################################################################################
@@ -191,44 +242,9 @@ def sort_sequences(fasta_file,file_name=None):
             organism_sequences[id].append([number_name,OX,OS,organism_name,sequence_prot])
     print(f"Number of different organism: {len(organism_sequences.keys())}")
     return organism_sequences
+######################################################################
 
-def find_sequential_ordering_gene(chain):
-    id=""
-    numbers=[]
-    #transform the chain string as a list of charcaters
-    chain=list(chain)
-    last_digit=0
-    find_digit=False
-    for i in range(len(chain)-1,0,-1):
-         #if the character is a digit but not a "_"
-        if chain[i].isnumeric():
-            numbers.append(chain[i])
-            find_digit=True
-        elif find_digit==True:
-            break
-        last_digit=i
-    #reverse the list
-    numbers=numbers[::-1]
-    while numbers[0]=="0": #be sure to have no 0 at the beginning
-        numbers=numbers[1:]
-    #CONVERT the list into a string
-    numbers="".join(numbers)
-    #Convert into a integer
-    numbers=int(numbers)
-    #find the identifiant exemple: SAMEA2683035_02658 -> id: SAMEA2683035, number: 02658
-    #other exemple: JW2594 -> id: JW, number: 2594
-    
-    id=chain[:last_digit] 
-    
-    if "_" in id:
-        id=id[:id.index("_")]
-    #convert the list into a string
-    id="".join(id)
-    #print(f"(id,numbers): ({id},{numbers})")
-
-
-    return id,numbers
-
+######################################################################
 def compute_max_sim(seq,seqs):
     '''
     This function will compute the maximum similarity between the sequence seq and the sequences in seqs
@@ -244,7 +260,11 @@ def compute_max_sim(seq,seqs):
         if sim>max_sim:
             max_sim=sim
     return max_sim
+######################################################################
 
+###########################################################################################################################################
+#********************************************** MAIN FUNCTION *****************************************************************************
+########################################################################################################################################### 
 def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
 
     ''' 
@@ -324,11 +344,12 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
         
     else: #we will extract the first sequence of the two proteins to have them as pair at the beginning of the new file
         organism_one=sort_sequences(fastafile_one,file_name_list[0]) 
-        for key in organism_one.keys():
-            first_seq_one=organism_one[key][0]
-            break
         organism_two=sort_sequences(fastafile_two,file_name_list[1]) #dictionary with keys organism_id and values: [number_name,OX,OS,organism_name,sequence_prot,dictionary_of_ids]
-        for key in organism_two.keys():
+        
+    for key in organism_one.keys():
+            first_seq_one=organism_one[key][0] #take the first sequence of the data to keep it
+            break
+    for key in organism_two.keys():
             first_seq_two=organism_two[key][0]
             break
     ###################################################################################################
@@ -390,7 +411,7 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
         if overwrite=="yes":
             print(f"Overwriting the file {file_info}")
             with open(file_info, "w") as file:
-                file.write(f"Number of different organism in the first fasta file: {len(organism_one.keys())}\n")
+                file.write(f"Number of different organism in the first fasta file: {len(organism_one.keys())}\n") #number of different OX
                 file.write(f"Number of different organism in the second fasta file: {len(organism_two.keys())}\n")
                 file.write(f"Number of different organism in the new fasta file: {len(common_keys)}\n")
 
@@ -413,12 +434,13 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
     n_pairs_per_organism={}
     with open(file_name, "w") as output_handle: #write the sequence of the two files combined only for the common keys
         #write the two first sequences
-        if operons=="yes":
-            output_handle.write(f">sp {first_seq_one[0]}-{first_seq_two[0]}_{first_seq_one[1]} OS={first_seq_one[2]}-{first_seq_two[2]} OX={first_seq_one[1]}-{first_seq_two[1]}\n")
-            output_handle.write(str(first_seq_one[4]) + str(first_seq_two[4])+ "\n")
+        #if operons=="yes":
+        output_handle.write(f">sp {first_seq_one[0]}-{first_seq_two[0]}_{first_seq_one[3]} OS={first_seq_one[2]}-{first_seq_two[2]} OX={first_seq_one[1]}-{first_seq_two[1]}\n")
+        output_handle.write(str(first_seq_one[4]) + str(first_seq_two[4])+ "\n")
+        key_first=first_seq_one[1]
         for key in tqdm(common_keys): #dico: key:organism_id -> lists of [number_name,OX,OS,organism_name,sequence_prot,dictionary_of_ids]
             #take the same number of sequences for the two proteins
-            n=min(len(organism_one[key]),len(organism_two[key]))
+            n=2*len(organism_one[key])*len(organism_two[key]) #every possible pair of sequences
             
             ###########################################################################################
             ############################# CASE OF OPERONS CONSIDERATION ###############################
@@ -473,7 +495,10 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
                         break
 
                 if len(min_n_distance)>0:#if we have some pairings
+
                     seqs=[] #we will extract a certain numbers of pairs
+                    if key==key_first:
+                        seqs.append(str(first_seq_one[4]) + str(first_seq_two[4])+ "\n")
                     if how_many_keeped>0: #if we know how many
                         max_k=min(len(min_n_distance),how_many_keeped)
                     else: #if we have a distanceMax it is just all the pairs in min_n_distance
@@ -501,19 +526,29 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
                     #print("n_pairs_per_organism: ",n_pairs_per_organism)
                                           
             else:  
-                for i in range(n): 
-                    if organism_one[key][i][2]!=organism_two[key][i][2]:
-                        #print(f"Organism name (OS) are different for the same OX {key} number: {organism_one[key][i][2]} and {organism_two[key][i][2]}")
-                        OS=organism_one[key][i][2]+"-"+organism_two[key][i][2]
-                    else:
-                        n_pairs_per_organism[key]=[n]
-                        OS=organism_one[key][i][2]
-                    output_handle.write(f">sp {organism_one[key][i][0]}-{organism_two[key][i][0]}_{organism_one[key][i][1]} OS={OS} OX={key}\n") #should be the same for the two proteins
-                    #take the seq of the protein, second argument of the list
-                    output_handle.write(str(organism_one[key][i][3]) + str(organism_two[key][i][3])+ "\n")
+                seqs=[]
+                if key==key_first:
+                    seqs.append(str(first_seq_one[4]) + str(first_seq_two[4])+ "\n")
+                for i in range(len(organism_one[key])):
+                    for j in range(len(organism_two[key])):
+                        seq=str(organism_one[key][i][4]) + str(organism_two[key][j][4])+ "\n"
+                        max_sim_found=compute_max_sim(seq,seqs)
+                        if max_sim_found<max_sim:
+                            seqs.append(seq)
+                            if organism_one[key][i][2]!=organism_two[key][j][2]:
+                                OS=organism_one[key][i][2]+"-"+organism_two[key][j][2]
+                            else:
+                                OS=organism_one[key][i][2]
+                            output_handle.write(f">sp {organism_one[key][i][0]}-{organism_two[key][j][0]}_{organism_one[key][i][3]}-{organism_two[key][j][3]} OS={OS} OX={key}\n")
+                            output_handle.write(seq)
+                        else:
+                            n-=1
+                n_pairs_per_organism[key]=[n]
+    
+    ###################################################################################################
     
     #---------------–--------------------------------------------------#
-    organisms=[key for key in n_pairs_per_organism.keys()]
+    organisms=[key for key in n_pairs_per_organism.keys()] #every OX that was common
     #have a list of str
     organisms=[str(organism) for organism in organisms]
     
@@ -529,26 +564,20 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
     if n_tot==[]:
         print("No organism pair found")
         return
-    #if operons=="yes":
-        #min_n_distance=[n_pairs_per_organism[key][1] for key in organisms]    
-        #min_n_distance=[min_n_distance[i] for i in id] #min_n_distance is a list of n_pairs_per_organism[key][1] for key in organisms -> we have [distance1,distance2,...,distance_n]
 
     #save in a text file the number of pairs of sequences per organism
     if overwrite=="yes":
         with open(file_info, "a") as file:
             file.write("Number of pairs of sequences per organism: \n")
             for i in range(len(organisms)):
-                #print("Organism: ",organisms[i])
-                #print("min_n_distance: ",min_n_distance[i])
+
                 file.write(f"{organisms[i]}: {n_tot[i]}\n")
                 file.write("........................................ \n")
                 if operons=="yes":
                     file.write("Minimal distances between the operons: \n")
                     organism=organisms[i]
                     min_n_distance_for_this_organism=n_pairs_per_organism[organism][1] #list of [distance,position i, position j,strand]
-                    #keys_min_n_distance=
-                    #for key in keys_min_n_distance:
-                        #print("min_n_distance[i][k][3]: ",min_n_distance[i][k][3])
+
                     for i in range(len(min_n_distance_for_this_organism)):
                         distance=min_n_distance_for_this_organism[i][0]
                         strand=min_n_distance_for_this_organism[i][3]
@@ -559,15 +588,15 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
                     file.write("\n")
                 file.write("----------------------------------------- \n")
                 file.write("----------------------------------------- \n")
-    #print(n_tot)
-    #print("np.max(n_tot): ",np.max(n_tot))
+
     path_figure_1=path_figure+"_distribution_pairs_organism.png"
-    plt.figure()
-    #histogram with axis x the number of pairs of sequences and axis y the number of organisms with this number of pairs
-    plt.hist(n_tot,bins=50)
-    plt.xlabel("Number of pairs of sequences")
-    plt.ylabel("Number of organisms")
-    plt.xlim(0,np.max(n_tot)+1)
+    plt.figure(figsize=(6,8))
+    plt.hist(n_tot,bins=600)
+    plt.xlabel("Number of pairs of sequences",fontsize=14)
+    plt.ylabel("Number of organisms",fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.xlim(0,np.max(n_tot))
     plt.grid()
     plt.savefig(path_figure_1)
     plt.show()
@@ -595,11 +624,13 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
             for k in min_n_distance_k.keys():
                 if min_n_distance_k[k]!=[]:
                     path_figure_k=path_figure+"_distance_"+str(k+1)+".png"
-                    plt.figure()
+                    plt.figure(figsize=(4,6))
                     plt.title(f"Distance distribution for the {k+1} best pairing")
-                    plt.hist(min_n_distance_k[k],bins=50)
-                    plt.xlabel("Distance")
-                    plt.ylabel("Number of organisms")
+                    plt.hist(min_n_distance_k[k],bins=100)
+                    plt.xlabel("Distance",fontsize=14)
+                    plt.ylabel("Number of organisms",fontsize=14)
+                    plt.xticks(fontsize=12)
+                    plt.yticks(fontsize=12)
                     plt.grid()
                     plt.savefig(path_figure_k)
                     plt.show()
@@ -616,20 +647,22 @@ def TwoInOne(fastafile_one,fastafile_two,max_sim=0.95):
                     organisms_k.append(organism)
             if min_n_distance_k!=[]:
                 path_figure_k=path_figure+"_distance.png"
-                plt.figure()
-                plt.title(f"Distance distribution for the best pairing with distance smaller than {distanceMax}")
+                plt.figure(figsize=(4,6))
+                plt.title(f"Number of pairs {len(min_n_distance_k)}")
                 plt.hist(min_n_distance_k,bins=50)
-                plt.xlabel("Distance")
-                plt.ylabel("Number of organisms")
+                plt.xlabel("Distance", fontsize=14)
+                plt.ylabel("Number of organisms",fontsize=14)
+                plt.xlim(0,np.max(min_n_distance_k))
+                plt.xticks(fontsize=12)
+                plt.yticks(fontsize=12)
                 plt.grid()
                 plt.savefig(path_figure_k)
                 plt.show()
                 plt.close()
-
-
-
     print(f"New fasta file saved in {file_name}")
     print(f"Info file saved in {file_info}")
     print(f"Figure saved in {path_figure}")
    
-
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
