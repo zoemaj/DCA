@@ -254,17 +254,19 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
             
             #count how many times we have two times the same pair but with [i,j] and [j,i]
             N_top=N_s
+            print("N_top:",N_top)
             for i in range(len(dcaContactsSquare)):
                 if i>N_top:
                     #print("i:",i)
                     break
                 x,y=dcaContactsSquare[i]
-                dca_list_pairs=list(dcaContactsSquare[i+1:])
+                dca_list_pairs=list(dcaContactsSquare[i+1:N_top+1])
                 for id, el in enumerate(dca_list_pairs):
                     if el[0]==y and el[1]==x:
                         N_top+=1
-            dcaContactsSquare=dcaContactsSquare[:N_top+1,:] #adapt the number of contacts to the number of contacts that we want to plot
-            
+                        print("new N_top:",N_top)
+            dcaContactsSquare=dcaContactsSquare[:N_top,:] #adapt the number of contacts to the number of contacts that we want to plot
+            print("dcaContactsSquare:",dcaContactsSquare)
             for pair in dcaContactsSquare:
                 i=pair[0]
                 j=pair[1]
@@ -300,7 +302,9 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
         else:
             Ntop=numTopContacts
         dcaContacts=dcaContacts[:Ntop,:]
-        print("The 10 best contacts are:",dcaContacts[:10])
+
+    max_to_print=min(10,len(dcaContacts))
+    print(f"The top {max_to_print} contacts are:",dcaContacts[:max_to_print])
         
     
     dcaContacts=dcaContacts.astype(int)
