@@ -167,6 +167,12 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
                     y_end=y_s-1+h_s 
                     error_map=np.zeros((N,N))
                     error_map[x_init:x_end+1,y_init:y_end+1]=dcaErrors[x_init:x_end+1,y_init:y_end+1]
+                elif length_prot1!=0:
+                    x_init=length_prot1
+                    y_init=0
+                    x_end=N-1
+                    y_end=length_prot1-1
+                    error_map=dcaErrors
                 else:
                     x_init=0
                     y_init=0
@@ -176,12 +182,14 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
                 ####################################################
                 if penalizingErrors:
                     if not WithoutGauss: #we remove the border
+                        
                         x_init=x_init+ceil(Nsquare/2)
                         y_init=y_init+ceil(Nsquare/2)
                         x_end=x_end-ceil(Nsquare/2)
                         y_end=y_end-ceil(Nsquare/2)
                     #attribute the errors to the dca_new in the good region
                     dca_new[x_init:x_end+1,y_init:y_end+1]=dca_original[x_init:x_end+1,y_init:y_end+1] - error_map[x_init:x_end+1,y_init:y_end+1] 
+                   
                     #don't penalize the errors in the diagonal +- CutError_L (and that are inside of the square/border)
                     for i in range(N):
                         for j in range(N): 
@@ -201,9 +209,11 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
                             dca_tot[i,j]=dca_new[i,j]                      
     else: #no errors
         dca_tot=dca_original
-    if length_prot1!=0:
-        dca_tot[:length_prot1,:length_prot1]=0
-        dca_tot[length_prot1:,length_prot1:]=0  
+        if length_prot1!=0:
+            dca_tot[:length_prot1,:length_prot1]=0
+            dca_tot[length_prot1:,length_prot1:]=0  
+            dca_tot[:length_prot1,length_prot1:]=0 #since for length_prot1!=0 we will only plot one part (and not also the symmetrical) we put to 0 the elements that are not in the square
+    
     ################################################################################################
     ######################### TREATMENT OF THE SCORES ##############################################
     ################################################################################################
@@ -275,12 +285,13 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
         Ntop=len(dcaContacts)
         dcaContacts=np.asarray(dcaContacts)
     else:
-        upper_triangular = np.triu(dca_tot,1)
+        upper_triangular = np.tril(dca_tot,1)
+        
+        
         sortedScores=-np.sort(upper_triangular.flatten())
+
         sortedScores=sortedScores[sortedScores!=0]
-        #since for length_prot1!=0 we will only plot one part (and not also the symmetrical) we put to 0 the elements that are not in the square
-        if length_prot1!=0:
-            dca_tot[:length_prot1,length_prot1:]=0
+        
         dcaContacts=np.argwhere((dca_tot!=0) & (dca_tot>=-sortedScores[numTopContacts])) #take = if there are several times the same value sortedScores[numTopContacts]
         contactRanks=np.argsort(-dca_tot[dcaContacts[:,0],dcaContacts[:,1]])
         dcaContacts=dcaContacts[contactRanks,:]
@@ -289,7 +300,7 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
         else:
             Ntop=numTopContacts
         dcaContacts=dcaContacts[:Ntop,:]
-        print("dcasContacts:",dcaContacts)
+        print("The 10 best contacts are:",dcaContacts[:10])
         
     
     dcaContacts=dcaContacts.astype(int)
