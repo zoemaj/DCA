@@ -201,10 +201,9 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
                             dca_tot[i,j]=dca_new[i,j]                      
     else: #no errors
         dca_tot=dca_original
-        if length_prot1!=0:
-            dca_tot[:length_prot1,:length_prot1]=0
-            dca_tot[length_prot1:,length_prot1:]=0
-        
+    if length_prot1!=0:
+        dca_tot[:length_prot1,:length_prot1]=0
+        dca_tot[length_prot1:,length_prot1:]=0  
     ################################################################################################
     ######################### TREATMENT OF THE SCORES ##############################################
     ################################################################################################
@@ -279,11 +278,18 @@ def extractTopContacts(dcaFile,numTopContacts,diagIgnore=4,errors=None,penalizin
         upper_triangular = np.triu(dca_tot,1)
         sortedScores=-np.sort(upper_triangular.flatten())
         sortedScores=sortedScores[sortedScores!=0]
-        dcaContacts=np.argwhere((dca_tot!=0) & (dca_tot>=sortedScores[numTopContacts])) #take = if there are several times the same value sortedScores[numTopContacts]
+        #since for length_prot1!=0 we will only plot one part (and not also the symmetrical) we put to 0 the elements that are not in the square
+        if length_prot1!=0:
+            dca_tot[:length_prot1,length_prot1:]=0
+        dcaContacts=np.argwhere((dca_tot!=0) & (dca_tot>=-sortedScores[numTopContacts])) #take = if there are several times the same value sortedScores[numTopContacts]
         contactRanks=np.argsort(-dca_tot[dcaContacts[:,0],dcaContacts[:,1]])
         dcaContacts=dcaContacts[contactRanks,:]
-        dcaContacts=dcaContacts[:numTopContacts*2,:]
-        Ntop=numTopContacts*2
+        if length_prot1==0:
+            Ntop=numTopContacts*2
+        else:
+            Ntop=numTopContacts
+        dcaContacts=dcaContacts[:Ntop,:]
+        print("dcasContacts:",dcaContacts)
         
     
     dcaContacts=dcaContacts.astype(int)
